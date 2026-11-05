@@ -1,0 +1,22 @@
+# Louvores & Adoração — pacote PWA
+
+Este pacote prepara o HTML atual para instalação como aplicativo (PWA) e cache dos arquivos do aplicativo para abrir offline depois da primeira visita online.
+
+## Arquivos
+- `index.html`: aplicativo original, preservado com metadados PWA e registro do service worker.
+- `manifest.webmanifest`: nome, ícones e comportamento de instalação.
+- `sw.js`: cache dos arquivos essenciais para uso offline.
+- `icon-192.png` e `icon-512.png`: ícones do aplicativo.
+
+## Publicação gratuita
+Uma opção simples é publicar estes arquivos em uma hospedagem estática HTTPS gratuita, como GitHub Pages. Depois da publicação, abra o endereço HTTPS no Chrome/Android e use “Instalar aplicativo” ou “Adicionar à tela inicial”.
+
+## Atenção aos dados
+1. Antes de testar a versão hospedada, faça um backup JSON no aplicativo atual.
+2. O armazenamento do navegador é separado por endereço. A versão hospedada não recebe automaticamente as músicas que estão salvas no arquivo `file:///` ou em outro endereço.
+3. Depois de publicar, restaure o backup JSON na nova versão e confira a quantidade de músicas e favoritos.
+4. Não apague o HTML antigo nem os backups.
+5. O modo offline do PWA só fica disponível depois que a página é aberta online pelo menos uma vez.
+
+## Google Drive
+A integração com Google Drive ainda não está ativada neste pacote. Ela depende da configuração OAuth no Google Cloud e do endereço HTTPS definitivo da hospedagem. Não cole segredos ou senhas no HTML.
