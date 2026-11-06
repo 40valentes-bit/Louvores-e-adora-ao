@@ -29,7 +29,9 @@ button{font:inherit;border:0;border-radius:12px;padding:12px 15px;font-weight:70
 .layout.song-open #detail{display:flex;position:fixed;inset:0;z-index:1000;width:100%;height:100vh;height:100dvh;max-width:none;margin:0;border:0;border-radius:0;padding: max(12px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom));box-shadow:none;flex-direction:column;overflow:hidden;background:var(--card)}
 .layout.song-open .song-reading{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .layout.song-open .song-fixed-header{position:sticky;top:0;z-index:30;flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:8px 0 10px;background:var(--card);border-bottom:1px solid var(--line)}
-.layout.song-open .song-fixed-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.layout.song-open .song-fixed-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.layout.song-open .song-navigation-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.layout.song-open .reading-toggle-control{min-width:38px;width:38px;padding:7px 0;background:#e9edf2;color:#465568;border:1px solid #d5dce5;border-radius:10px;font-size:17px;line-height:1}
 .layout.song-open .song-fixed-header button{min-height:42px;padding:9px 13px}
 .layout.song-open .format-tools{margin:0;padding:8px;gap:10px;flex-wrap:wrap}
 .layout.song-open .format-tools label{font-size:12px}
@@ -40,7 +42,7 @@ button{font:inherit;border:0;border-radius:12px;padding:12px 15px;font-weight:70
 .layout.song-open .song-reading{padding-bottom:24px}
 
 .layout.song-open .chords{overflow-x:hidden;overflow-y:visible;max-width:100%;width:100%;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
-.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.detail-head h2{font-size:21px;margin:0}.chords{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-family:"Courier New",Courier,ui-monospace,monospace;font-size:var(--cifra-size,18px);line-height:1.85;background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;overflow-x:hidden;overflow-y:visible;max-width:100%;width:100%;min-width:0;-webkit-overflow-scrolling:touch}.scroll-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f0f4fa;border-radius:12px;padding:10px;margin:10px 0}.scroll-tools label{margin:0}.scroll-tools input[type=range]{width:115px;padding:0}.scroll-speed-controls{display:flex;align-items:center;gap:5px;padding:3px 6px;background:#eaf0f8;border:1px solid var(--line);border-radius:12px}.scroll-speed-controls button{min-width:38px;padding:7px 10px;background:#fff;color:var(--navy);font-size:19px;line-height:1}.scroll-speed-controls span{min-width:43px;text-align:center;font-size:13px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}.back-button{background:var(--navy);color:white}.toolbar button,.scroll-tools button{min-height:42px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar button{padding:10px 13px}.format-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 12px;padding:10px;background:#f0f4fa;border-radius:12px}.format-tools label{display:flex;align-items:center;gap:6px;margin:0;color:var(--navy);font-size:13px}.format-tools select{width:auto;min-width:125px;padding:9px 10px}.format-tools input[type=color]{width:42px;height:40px;padding:3px;border-radius:9px}.format-tools input[type=checkbox]{width:19px;height:19px;padding:0}.notice{font-size:12px;color:var(--muted);line-height:1.5;margin-top:12px}
+.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.detail-head h2{font-size:21px;margin:0}.chords{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-family:"Courier New",Courier,ui-monospace,monospace;font-size:var(--cifra-size,18px);line-height:1.85;background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;overflow-x:hidden;overflow-y:visible;max-width:100%;width:100%;min-width:0;-webkit-overflow-scrolling:touch}.scroll-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f0f4fa;border-radius:12px;padding:10px;margin:10px 0}.scroll-tools label{margin:0}.scroll-tools input[type=range]{width:115px;padding:0}.scroll-speed-controls{display:flex;align-items:center;gap:3px;padding:2px 4px;background:#f1f3f5;border:1px solid #e0e4e8;border-radius:10px}.scroll-speed-controls button{min-width:28px;min-height:30px;padding:4px 6px;background:#e6e9ed;color:#596575;border:1px solid #d9dee4;border-radius:7px;font-size:16px;line-height:1}.scroll-speed-controls span{min-width:39px}.scroll-speed-controls span{min-width:39px;text-align:center;font-size:13px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}.back-button{background:var(--navy);color:white}.toolbar button,.scroll-tools button{min-height:42px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar button{padding:10px 13px}.format-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 12px;padding:10px;background:#f0f4fa;border-radius:12px}.format-tools label{display:flex;align-items:center;gap:6px;margin:0;color:var(--navy);font-size:13px}.format-tools select{width:auto;min-width:125px;padding:9px 10px}.format-tools input[type=color]{width:42px;height:40px;padding:3px;border-radius:9px}.format-tools input[type=checkbox]{width:19px;height:19px;padding:0}.notice{font-size:12px;color:var(--muted);line-height:1.5;margin-top:12px}
 label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 5px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .empty{text-align:center;color:var(--muted);padding:26px 12px}.hidden{display:none!important}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:25px 10px}
@@ -88,43 +90,27 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 .layout.song-open.reading-focus .detail-head {
   display: none !important;
 }
-.reading-footer-controls {
+.reading-footer-toggle {
   display: none;
   position: fixed;
   z-index: 1100;
   left: 50%;
   bottom: max(10px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 4px 7px;
-  border-radius: 22px;
-  background: #102b52eF;
-  box-shadow: 0 2px 9px #0003;
-}
-.reading-footer-controls button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 38px;
-  height: 34px;
-  min-height: 34px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
-  border: 0;
-  border-radius: 18px;
-  background: transparent;
+  border-radius: 16px;
+  background: #102b52eF;
   color: #fff;
-  font-size: 21px;
+  font-size: 15px;
   line-height: 1;
+  box-shadow: 0 2px 9px #0003;
+  align-items: center;
+  justify-content: center;
 }
-.reading-footer-controls .reading-footer-toggle {
-  width: 42px;
-  font-size: 17px;
-  background: #fff;
-  color: #102b52;
-}
-.layout.song-open.reading-focus .reading-footer-controls {
+.layout.song-open.reading-focus .reading-footer-toggle {
   display: flex;
 }
 .layout.song-open.reading-focus .song-reading {
@@ -3272,6 +3258,8 @@ function stopAutoScroll(){
  scrollRemainder=0;
  const b=$('autoScroll'),layout=$('layout'),footerButton=$('readingFooterToggle');
  if(b)b.textContent='▶ Rolagem automática';
+ const navToggle=$('readingToggleControl');
+ if(navToggle){navToggle.textContent='▶';navToggle.setAttribute('aria-label','Continuar rolagem');navToggle.setAttribute('title','Continuar rolagem');}
  if(layout)layout.classList.remove('reading-focus');
  if(footerButton){footerButton.textContent='▶';footerButton.setAttribute('aria-label','Iniciar rolagem automática');}
 }
@@ -3281,6 +3269,8 @@ function startAutoScroll(){
  if(!area)return;
  scrollRemainder=0;
  if(b)b.textContent='Ⅱ Pausar rolagem';
+ const navToggle=$('readingToggleControl');
+ if(navToggle){navToggle.textContent='Ⅱ';navToggle.setAttribute('aria-label','Pausar rolagem');navToggle.setAttribute('title','Pausar rolagem');}
  if(layout)layout.classList.add('reading-focus');
  if(footerButton){footerButton.textContent='Ⅱ';footerButton.setAttribute('aria-label','Pausar rolagem automática');}
  scrollTimer=setInterval(()=>{
@@ -3291,6 +3281,7 @@ function startAutoScroll(){
   if(area.scrollTop+area.clientHeight>=area.scrollHeight-2)stopAutoScroll();
  },50);
 }
+function toggleAutoScroll(){if(scrollTimer)stopAutoScroll();else startAutoScroll();}
 function changeFont(delta){fontSize=Math.max(12,Math.min(32,fontSize+delta));document.documentElement.style.setProperty('--cifra-size',fontSize+'px');}
 function setScrollSpeed(v){scrollSpeed=Math.max(0.2,Math.min(5,Number(v)));const label=$('speedValue');if(label)label.textContent=scrollSpeed.toFixed(1)+'×';}
 function adjustScrollSpeed(delta){setScrollSpeed(Math.round((scrollSpeed+delta)*10)/10);}
@@ -3300,7 +3291,10 @@ function openSong(id){
  $('layout').classList.add('song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
-  <button class="back-button" onclick="backToList()">← Voltar à lista</button>
+  <div class="song-navigation-actions">
+   <button class="back-button" onclick="backToList()">← Voltar à lista</button>
+   <button type="button" class="reading-toggle-control" id="readingToggleControl" onclick="toggleAutoScroll()" aria-label="Continuar rolagem" title="Continuar rolagem">▶</button>
+  </div>
   <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end">
    <div class="scroll-speed-controls" aria-label="Controlar velocidade da rolagem">
     <button type="button" onclick="adjustScrollSpeed(-0.2)" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
@@ -3322,11 +3316,7 @@ function openSong(id){
  <div class="detail-head"><div><div class="meta">${esc(s.category)} • ${esc(s.artist||'')}</div><h2>${esc(s.title)}</h2><div class="meta">Tom original: ${esc(s.key||'—')}</div></div></div>
  <div class="song-reading" id="songReading">${`<p><a href="https://www.cifraclub.com.br/search/?q=${encodeURIComponent((s.title||'')+' '+(s.artist||''))}" target="_blank" rel="noopener">Consultar no Cifra Club: ${esc(s.title)} ↗</a></p>`}<div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset)}</div>
  <div class="notice">Dica: para alinhar os acordes, mantenha cada linha de acordes exatamente acima da linha da letra. No celular, as linhas se ajustam automaticamente à largura da tela, mantendo os acordes e a letra legíveis.</div><div class="notice">${s.demo?'Esta é uma cifra demonstrativa criada para testar a transposição.':'Se a cifra ainda não estiver cadastrada, use “Adicionar” para inserir uma versão autorizada.'} As músicas adicionadas por você ficam salvas neste dispositivo.</div></div>
- <div class="reading-footer-controls" aria-label="Controles da rolagem">
-  <button type="button" onclick="adjustScrollSpeed(-0.2)" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-  <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>
-  <button type="button" onclick="adjustScrollSpeed(0.2)" aria-label="Aumentar velocidade" title="Aumentar velocidade">＋</button>
- </div>`;
+ <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>`;
  const boldControl=$('viewBold'),chordColorControl=$('viewChordColor'),colorControl=$('viewLyricColor'),fontControl=$('viewFont');
  if(boldControl)boldControl.checked=!!s.bold;
  if(chordColorControl)chordColorControl.value=safeColor(s.chordColor,'#1d4f91');
