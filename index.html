@@ -29,15 +29,24 @@ button{font:inherit;border:0;border-radius:12px;padding:12px 15px;font-weight:70
 .layout.song-open #detail{display:flex;position:fixed;inset:0;z-index:1000;width:100%;height:100vh;height:100dvh;max-width:none;margin:0;border:0;border-radius:0;padding: max(12px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom));box-shadow:none;flex-direction:column;overflow:hidden;background:var(--card)}
 .layout.song-open .song-reading{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .layout.song-open .song-fixed-header{position:sticky;top:0;z-index:30;flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:8px 0 10px;background:var(--card);border-bottom:1px solid var(--line)}
-.layout.song-open .song-fixed-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.layout.song-open .song-navigation-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
-.layout.song-open .reading-toggle-control{min-width:38px;width:38px;padding:7px 0;background:#e9edf2;color:#465568;border:1px solid #d5dce5;border-radius:10px;font-size:17px;line-height:1}
-.layout.song-open .song-fixed-header button{min-height:42px;padding:9px 13px}
+
+.layout.song-open:not(.reading-focus) .song-navigation-actions,
+.layout.song-open:not(.reading-focus) .back-button {display:none !important;}
+.layout.song-open:not(.reading-focus) .song-fixed-actions {display:flex !important;justify-content:center !important;}
+.layout.song-open:not(.reading-focus) .reading-toggle-control {min-width:76px !important;}
+.layout.song-open .song-fixed-actions{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px}
+.layout.song-open .song-navigation-actions{display:flex;align-items:center;justify-content:flex-start;gap:5px;min-width:0}
+.layout.song-open .scroll-speed-controls{display:flex;align-items:center;gap:3px;padding:2px;background:rgba(210,216,224,.30);border:1px solid rgba(130,142,156,.24);border-radius:12px}
+.layout.song-open .scroll-speed-controls button{min-width:27px;width:27px;min-height:27px;padding:2px;background:rgba(190,199,210,.20);color:#536171;border:1px solid rgba(130,142,156,.16);border-radius:7px;font-size:17px;line-height:1}
+.layout.song-open .scroll-speed-controls span{display:none}
+.layout.song-open .reading-toggle-control{min-width:55px;min-height:27px;padding:5px 8px;background:rgba(185,196,209,.22);color:#465568;border:1px solid rgba(130,142,156,.20);border-radius:8px;font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap}
+.layout.song-open .back-button{justify-self:end;min-height:27px;padding:5px 8px;background:rgba(185,196,209,.22);color:#536171;border:1px solid rgba(130,142,156,.18);border-radius:8px;font-size:10px;white-space:nowrap}
+.layout.song-open .song-fixed-header button{min-height:38px;padding-top:8px;padding-bottom:8px}
 .layout.song-open .format-tools{margin:0;padding:8px;gap:10px;flex-wrap:wrap}
 .layout.song-open .format-tools label{font-size:12px}
 .layout.song-open .format-tools input[type=color]{width:38px;height:36px}
 .layout.song-open .format-tools select{min-width:115px;padding:7px 8px}
-@media(max-width:600px){.layout.song-open .format-tools{gap:7px}.layout.song-open .format-tools label{font-size:11px}.layout.song-open .chords{font-size:clamp(13px,4vw,var(--cifra-size,18px));line-height:1.7;padding:10px;margin:10px 0}.layout.song-open .song-reading{width:100%;min-width:0}.layout.song-open .detail-head{min-width:0}.layout.song-open .detail-head h2{overflow-wrap:anywhere}}
+@media(max-width:600px){.layout.song-open .format-tools{gap:7px}.layout.song-open .format-tools label{font-size:11px}.layout.song-open .song-fixed-actions{gap:4px}.layout.song-open .scroll-speed-controls button{min-width:31px;width:31px}.layout.song-open .reading-toggle-control{min-width:52px;padding:5px 6px;font-size:10px}.layout.song-open .back-button{min-height:27px;padding:5px 7px;font-size:9px}.layout.song-open .chords{font-size:clamp(13px,4vw,var(--cifra-size,18px));line-height:1.7;padding:10px;margin:10px 0}.layout.song-open .song-reading{width:100%;min-width:0}.layout.song-open .detail-head{min-width:0}.layout.song-open .detail-head h2{overflow-wrap:anywhere}}
 .layout.song-open .detail-head{flex:0 0 auto;padding:8px 0 4px}
 .layout.song-open .song-reading{padding-bottom:24px}
 
@@ -86,9 +95,41 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 }
 
  /* Modo de leitura limpa: oculta os controles e mantém apenas o botão discreto no rodapé. */
-.layout.song-open.reading-focus .song-fixed-header,
+.layout.song-open.reading-focus .song-fixed-header {
+  display:block !important;
+  position:static !important;
+  height:0 !important;
+  min-height:0 !important;
+  padding:0 !important;
+  margin:0 !important;
+  overflow:visible !important;
+  border:0 !important;
+  background:transparent !important;
+}
+.layout.song-open.reading-focus .song-fixed-header .format-tools,
 .layout.song-open.reading-focus .detail-head {
-  display: none !important;
+  display:none !important;
+}
+.layout.song-open.reading-focus .song-fixed-actions {
+  position:fixed !important;
+  z-index:1200 !important;
+  left:50% !important;
+  bottom:max(7px, env(safe-area-inset-bottom)) !important;
+  transform:translateX(-50%) !important;
+  width:min(250px, calc(100vw - 24px)) !important;
+  display:grid !important;
+  grid-template-columns:1fr auto 1fr !important;
+  align-items:center !important;
+  gap:5px !important;
+  padding:3px 5px !important;
+  border-radius:10px !important;
+  background:rgba(220,226,234,.16) !important;
+  border:1px solid rgba(120,132,148,.12) !important;
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.layout.song-open.reading-focus .song-reading {
+  padding-bottom:42px !important;
 }
 .reading-footer-toggle {
   display: none;
@@ -111,7 +152,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
   justify-content: center;
 }
 .layout.song-open.reading-focus .reading-footer-toggle {
-  display: flex;
+  display: none !important;
 }
 .layout.song-open.reading-focus .song-reading {
   padding-bottom: 58px;
@@ -3259,18 +3300,18 @@ function stopAutoScroll(){
  const b=$('autoScroll'),layout=$('layout'),footerButton=$('readingFooterToggle');
  if(b)b.textContent='▶ Rolagem automática';
  const navToggle=$('readingToggleControl');
- if(navToggle){navToggle.textContent='▶';navToggle.setAttribute('aria-label','Continuar rolagem');navToggle.setAttribute('title','Continuar rolagem');}
+ if(navToggle){navToggle.textContent='INICIAR';navToggle.setAttribute('aria-label','Iniciar rolagem');navToggle.setAttribute('title','Iniciar rolagem');}
  if(layout)layout.classList.remove('reading-focus');
  if(footerButton){footerButton.textContent='▶';footerButton.setAttribute('aria-label','Iniciar rolagem automática');}
 }
 function startAutoScroll(){
- if(scrollTimer){stopAutoScroll();return;}
+ if(scrollTimer)return;
  const b=$('autoScroll'),area=$('songReading'),layout=$('layout'),footerButton=$('readingFooterToggle');
  if(!area)return;
  scrollRemainder=0;
  if(b)b.textContent='Ⅱ Pausar rolagem';
  const navToggle=$('readingToggleControl');
- if(navToggle){navToggle.textContent='Ⅱ';navToggle.setAttribute('aria-label','Pausar rolagem');navToggle.setAttribute('title','Pausar rolagem');}
+ if(navToggle){navToggle.textContent='PAUSE';navToggle.setAttribute('aria-label','Pausar rolagem');navToggle.setAttribute('title','Pausar rolagem');}
  if(layout)layout.classList.add('reading-focus');
  if(footerButton){footerButton.textContent='Ⅱ';footerButton.setAttribute('aria-label','Pausar rolagem automática');}
  scrollTimer=setInterval(()=>{
@@ -3280,8 +3321,17 @@ function startAutoScroll(){
   if(pixels>0){area.scrollTop+=pixels;scrollRemainder-=pixels;}
   if(area.scrollTop+area.clientHeight>=area.scrollHeight-2)stopAutoScroll();
  },50);
+ if(navToggle){navToggle.textContent='PAUSE';navToggle.setAttribute('aria-label','Pausar rolagem');navToggle.setAttribute('title','Pausar rolagem');}
 }
-function toggleAutoScroll(){if(scrollTimer)stopAutoScroll();else startAutoScroll();}
+function toggleAutoScroll(){
+ const navToggle=$('readingToggleControl');
+ if(scrollTimer){
+  clearInterval(scrollTimer);scrollTimer=null;scrollRemainder=0;
+  if(navToggle){navToggle.textContent='ROLAR';navToggle.setAttribute('aria-label','Retomar rolagem');navToggle.setAttribute('title','Retomar rolagem');}
+ }else{
+  startAutoScroll();
+ }
+}
 function changeFont(delta){fontSize=Math.max(12,Math.min(32,fontSize+delta));document.documentElement.style.setProperty('--cifra-size',fontSize+'px');}
 function setScrollSpeed(v){scrollSpeed=Math.max(0.2,Math.min(5,Number(v)));const label=$('speedValue');if(label)label.textContent=scrollSpeed.toFixed(1)+'×';}
 function adjustScrollSpeed(delta){setScrollSpeed(Math.round((scrollSpeed+delta)*10)/10);}
@@ -3291,18 +3341,14 @@ function openSong(id){
  $('layout').classList.add('song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
-  <div class="song-navigation-actions">
-   <button class="back-button" onclick="backToList()">← Voltar à lista</button>
-   <button type="button" class="reading-toggle-control" id="readingToggleControl" onclick="toggleAutoScroll()" aria-label="Continuar rolagem" title="Continuar rolagem">▶</button>
-  </div>
-  <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end">
-   <div class="scroll-speed-controls" aria-label="Controlar velocidade da rolagem">
+  <div class="song-navigation-actions" aria-label="Ajustar velocidade da rolagem">
+   <div class="scroll-speed-controls">
     <button type="button" onclick="adjustScrollSpeed(-0.2)" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-    <span id="speedValue" aria-live="polite">1.0×</span>
-    <button type="button" onclick="adjustScrollSpeed(0.2)" aria-label="Aumentar velocidade" title="Aumentar velocidade">＋</button>
+    <button type="button" onclick="adjustScrollSpeed(0.2)" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
    </div>
-   <button class="primary" id="autoScroll" onclick="startAutoScroll()">▶ Rolagem automática</button>
   </div>
+  <button type="button" class="reading-toggle-control" id="readingToggleControl" onclick="toggleAutoScroll()" aria-label="Iniciar rolagem" title="Iniciar rolagem">INICIAR</button>
+  <button type="button" class="back-button" onclick="backToList()">← VOLTAR</button>
  </div>
  <div class="format-tools" aria-label="Formatação da cifra">
   <label><input id="viewBold" type="checkbox" oninput="setViewBold(this.checked)"> <strong>B</strong> Negrito</label>
