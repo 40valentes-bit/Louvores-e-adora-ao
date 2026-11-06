@@ -88,27 +88,43 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 .layout.song-open.reading-focus .detail-head {
   display: none !important;
 }
-.reading-footer-toggle {
+.reading-footer-controls {
   display: none;
   position: fixed;
   z-index: 1100;
   left: 50%;
   bottom: max(10px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  width: 38px;
-  height: 30px;
-  min-height: 30px;
-  padding: 0;
-  border-radius: 16px;
-  background: #102b52eF;
-  color: #fff;
-  font-size: 15px;
-  line-height: 1;
-  box-shadow: 0 2px 9px #0003;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  padding: 4px 7px;
+  border-radius: 22px;
+  background: #102b52eF;
+  box-shadow: 0 2px 9px #0003;
 }
-.layout.song-open.reading-focus .reading-footer-toggle {
+.reading-footer-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: #fff;
+  font-size: 21px;
+  line-height: 1;
+}
+.reading-footer-controls .reading-footer-toggle {
+  width: 42px;
+  font-size: 17px;
+  background: #fff;
+  color: #102b52;
+}
+.layout.song-open.reading-focus .reading-footer-controls {
   display: flex;
 }
 .layout.song-open.reading-focus .song-reading {
@@ -3306,7 +3322,11 @@ function openSong(id){
  <div class="detail-head"><div><div class="meta">${esc(s.category)} • ${esc(s.artist||'')}</div><h2>${esc(s.title)}</h2><div class="meta">Tom original: ${esc(s.key||'—')}</div></div></div>
  <div class="song-reading" id="songReading">${`<p><a href="https://www.cifraclub.com.br/search/?q=${encodeURIComponent((s.title||'')+' '+(s.artist||''))}" target="_blank" rel="noopener">Consultar no Cifra Club: ${esc(s.title)} ↗</a></p>`}<div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset)}</div>
  <div class="notice">Dica: para alinhar os acordes, mantenha cada linha de acordes exatamente acima da linha da letra. No celular, as linhas se ajustam automaticamente à largura da tela, mantendo os acordes e a letra legíveis.</div><div class="notice">${s.demo?'Esta é uma cifra demonstrativa criada para testar a transposição.':'Se a cifra ainda não estiver cadastrada, use “Adicionar” para inserir uma versão autorizada.'} As músicas adicionadas por você ficam salvas neste dispositivo.</div></div>
- <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>`;
+ <div class="reading-footer-controls" aria-label="Controles da rolagem">
+  <button type="button" onclick="adjustScrollSpeed(-0.2)" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
+  <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>
+  <button type="button" onclick="adjustScrollSpeed(0.2)" aria-label="Aumentar velocidade" title="Aumentar velocidade">＋</button>
+ </div>`;
  const boldControl=$('viewBold'),chordColorControl=$('viewChordColor'),colorControl=$('viewLyricColor'),fontControl=$('viewFont');
  if(boldControl)boldControl.checked=!!s.bold;
  if(chordColorControl)chordColorControl.value=safeColor(s.chordColor,'#1d4f91');
