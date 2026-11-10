@@ -53,6 +53,12 @@ create trigger on_auth_user_created_pending
 after insert on auth.users
 for each row execute procedure public.register_pending_user();
 
+
+-- Permite atualizar a cópia compartilhada da mesma música pelo mesmo usuário.
+create unique index if not exists shared_songs_owner_source_unique
+on public.shared_songs (owner_id, source_local_id)
+where source_local_id is not null;
+
 alter table public.user_approvals enable row level security;
 alter table public.shared_songs enable row level security;
 alter table public.user_settings enable row level security;
