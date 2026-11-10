@@ -145,10 +145,14 @@ async function syncAll(){
   const {data:settings,error:settingsError}=await client.from('user_settings').select('settings').eq('user_id',user.id).maybeSingle();
   if(settingsError)throw settingsError;
   const keys=settings&&settings.settings&&Array.isArray(settings.settings.favorite_song_keys)?settings.settings.favorite_song_keys:[];
-  if(keys.length){
-   const ids=local.filter(s=>keys.includes(songKey(s))).map(s=>s.id);
-   await window.LouvoresApp.setFavorites(ids);
-  }else await saveSettings();
+  const localFavoriteKeys=window.LouvoresApp.getFavorites().map(id=>{
+   const song=local.find(item=>String(item.id)===String(id));
+   return song?songKey(song):null;
+  }).filter(Boolean);
+  const mergedKeys=new Set([...keys,...localFavoriteKeys]);
+  const ids=local.filter(song=>mergedKeys.has(songKey(song))).map(song=>song.id);
+  await window.LouvoresApp.setFavorites(ids);
+  await saveSettings();
   status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); nenhuma música local foi substituída.');
  }catch(e){status('A sincronização não foi concluída: '+(e.message||e),true);}
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
