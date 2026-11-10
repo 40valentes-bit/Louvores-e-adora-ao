@@ -3121,46 +3121,38 @@ async function persist(){
  }
 }
 async function initializeLibraryStorage(){
- // Preserva a biblioteca explícita do localStorage quando ela ainda não tem
- // carimbo de data. Isso corrige instalações antigas em que o IndexedDB
- // podia conter a lista de demonstração mais longa e sobrescrever a lista do usuário.
+ // Regra de prioridade: se existe uma biblioteca salva no localStorage,
+ // ela representa a lista escolhida pelo usuário e sempre vence o IndexedDB.
+ // O IndexedDB só é usado como recuperação quando não existe lista no localStorage.
  const localSongs=Array.isArray(savedSongs)?songs.slice():null;
  const localFavorites=Array.isArray(readLocal('louvores_favs',null))?favorites.slice():null;
  const localSavedAt=readLocal('louvores_saved_at',null);
  let libraryUpdatedAt=typeof localSavedAt==='string'&&Number.isFinite(Date.parse(localSavedAt))?localSavedAt:null;
  try{
   const stored=await readLibraryDB();
-  if(stored&&Array.isArray(stored.songs)){
-   const dbSongs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
-   const dbFavorites=Array.isArray(stored.favorites)?stored.favorites:[];
-   const dbUpdatedAt=typeof stored.updatedAt==='string'&&Number.isFinite(Date.parse(stored.updatedAt))?stored.updatedAt:null;
-   // Sem carimbo local (bibliotecas criadas em versões anteriores), o localStorage
-   // é a cópia escolhida pelo usuário. Com carimbos, vence a cópia mais recente.
-   const preferLocal=!!localSongs&&(!libraryUpdatedAt||!dbUpdatedAt||Date.parse(libraryUpdatedAt)>=Date.parse(dbUpdatedAt));
-   if(preferLocal){
-    songs=localSongs;
-    favorites=localFavorites||dbFavorites;
-    libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
-    await writeLibraryDB(libraryUpdatedAt);
-   }else{
-    songs=dbSongs;
-    favorites=dbFavorites;
-    libraryUpdatedAt=dbUpdatedAt||new Date().toISOString();
-   }
-  }else{
-   // Migra a biblioteca local existente para o banco local.
+  if(localSongs){
+   songs=localSongs;
+   if(localFavorites)favorites=localFavorites;
    libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
-   await writeLibraryDB(libraryUpdatedAt);
+  }else if(stored&&Array.isArray(stored.songs)){
+   songs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
+   favorites=Array.isArray(stored.favorites)?stored.favorites:[];
+   libraryUpdatedAt=typeof stored.updatedAt==='string'&&Number.isFinite(Date.parse(stored.updatedAt))?stored.updatedAt:new Date().toISOString();
+  }else{
+   // Primeira instalação: mantém a biblioteca inicial do aplicativo.
+   libraryUpdatedAt=new Date().toISOString();
   }
+  // Sincroniza os dois armazenamentos com a fonte escolhida acima.
+  await writeLibraryDB(libraryUpdatedAt);
  }catch(e){
   console.warn('Banco local indisponível; usando armazenamento compatível:',e);
-  if(localSongs){songs=localSongs;favorites=localFavorites||favorites;}
+  if(localSongs){songs=localSongs;if(localFavorites)favorites=localFavorites;}
   libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
  }
  try{
   localStorage.setItem('louvores_songs',JSON.stringify(songs));
   localStorage.setItem('louvores_favs',JSON.stringify(favorites));
-  localStorage.setItem('louvores_saved_at',libraryUpdatedAt||new Date().toISOString());
+  localStorage.setItem('louvores_saved_at',libraryUpdatedAt);
  }catch(e){}
 }
 function downloadText(filename,text,mime){
