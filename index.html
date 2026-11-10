@@ -182,7 +182,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
   border-radius: 8px;
 }
 /* VOLTAR dentro do painel de formatação, conforme a foto de referência. */
-.layout.song-open .format-tools .format-back-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;min-width:60px!important;min-height:32px!important;margin:0!important;padding:7px 12px!important;background:#0878ed!important;color:#fff!important;border:1px solid #0668d2!important;border-radius:9px!important;font-size:11px!important;font-weight:800!important;line-height:1!important;box-shadow:0 2px 5px rgba(8,120,237,.18)!important;white-space:nowrap!important}
+.layout.song-open .format-tools .format-back-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;flex:1 1 190px!important;width:min(240px,34vw)!important;min-width:170px!important;max-width:260px!important;min-height:56px!important;margin:0!important;padding:12px 20px!important;background:#0878ed!important;color:#fff!important;border:1px solid #0668d2!important;border-radius:12px!important;font-size:17px!important;font-weight:800!important;line-height:1!important;box-shadow:0 2px 5px rgba(8,120,237,.18)!important;white-space:nowrap!important}
 /* Botão INICIAR ampliado e azul somente antes de entrar no modo de leitura. */
 .layout.song-open:not(.reading-focus) .song-fixed-actions .reading-toggle-control {
   display: inline-flex !important;
@@ -201,6 +201,45 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
   line-height: 1.1 !important;
   box-shadow: 0 3px 8px rgba(8, 120, 237, 0.22) !important;
 }
+
+/* Botão VOLTAR ampliado também na barra inferior do modo de tela cheia. */
+.layout.song-open.reading-focus .song-fixed-actions {
+  width: min(560px, calc(100vw - 24px)) !important;
+  grid-template-columns: auto auto minmax(150px, 1fr) !important;
+  gap: 8px !important;
+}
+.layout.song-open.reading-focus .song-fixed-actions .back-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  padding: 10px 16px !important;
+  background: #0878ed !important;
+  color: #fff !important;
+  border: 1px solid #0668d2 !important;
+  border-radius: 10px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 420px) {
+  .layout.song-open.reading-focus .song-fixed-actions {
+    width: calc(100vw - 16px) !important;
+    grid-template-columns: auto auto minmax(105px, 1fr) !important;
+    gap: 5px !important;
+    padding: 3px !important;
+  }
+  .layout.song-open.reading-focus .song-fixed-actions .back-button {
+    min-height: 44px !important;
+    padding: 8px 9px !important;
+    font-size: 14px !important;
+  }
+}
+
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -3095,11 +3134,11 @@ async function readLibraryDB(){
   request.onerror=()=>reject(request.error||new Error('Falha ao ler biblioteca local'));
  });
 }
-async function writeLibraryDB(updatedAt=new Date().toISOString()){
+async function writeLibraryDB(){
  const db=await openLibraryDB();
  return new Promise((resolve,reject)=>{
   const tx=db.transaction('state','readwrite');
-  tx.objectStore('state').put({songs,favorites,updatedAt},'library');
+  tx.objectStore('state').put({songs,favorites,updatedAt:new Date().toISOString()},'library');
   tx.oncomplete=()=>resolve(true);
   tx.onerror=()=>reject(tx.error||new Error('Falha ao gravar biblioteca local'));
   tx.onabort=()=>reject(tx.error||new Error('Gravação local cancelada'));
@@ -3107,12 +3146,10 @@ async function writeLibraryDB(updatedAt=new Date().toISOString()){
 }
 async function persist(){
  let indexedDBError=null;
- const updatedAt=new Date().toISOString();
- try{await writeLibraryDB(updatedAt);}catch(e){indexedDBError=e;}
+ try{await writeLibraryDB();}catch(e){indexedDBError=e;}
  try{
   localStorage.setItem('louvores_songs',JSON.stringify(songs));
   localStorage.setItem('louvores_favs',JSON.stringify(favorites));
-  localStorage.setItem('louvores_saved_at',updatedAt);
   return true;
  }catch(e){
   if(!indexedDBError)return true;
@@ -3121,39 +3158,34 @@ async function persist(){
  }
 }
 async function initializeLibraryStorage(){
- // Regra de prioridade: se existe uma biblioteca salva no localStorage,
- // ela representa a lista escolhida pelo usuário e sempre vence o IndexedDB.
- // O IndexedDB só é usado como recuperação quando não existe lista no localStorage.
+ // Guarda a cópia persistida do localStorage antes de consultar o IndexedDB.
+ // Um IndexedDB antigo/vazio não deve apagar uma biblioteca local mais completa.
  const localSongs=Array.isArray(savedSongs)?songs.slice():null;
  const localFavorites=Array.isArray(readLocal('louvores_favs',null))?favorites.slice():null;
- const localSavedAt=readLocal('louvores_saved_at',null);
- let libraryUpdatedAt=typeof localSavedAt==='string'&&Number.isFinite(Date.parse(localSavedAt))?localSavedAt:null;
  try{
   const stored=await readLibraryDB();
-  if(localSongs){
-   songs=localSongs;
-   if(localFavorites)favorites=localFavorites;
-   libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
-  }else if(stored&&Array.isArray(stored.songs)){
-   songs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
-   favorites=Array.isArray(stored.favorites)?stored.favorites:[];
-   libraryUpdatedAt=typeof stored.updatedAt==='string'&&Number.isFinite(Date.parse(stored.updatedAt))?stored.updatedAt:new Date().toISOString();
+  if(stored&&Array.isArray(stored.songs)){
+   const dbSongs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
+   const dbFavorites=Array.isArray(stored.favorites)?stored.favorites:[];
+   // Se a cópia persistida do localStorage tiver mais músicas, ela é mais completa.
+   // Isso evita que um banco IndexedDB vazio ou desatualizado zere a biblioteca.
+   if(localSongs&&localSongs.length>dbSongs.length){
+    songs=localSongs;
+    favorites=localFavorites||dbFavorites;
+    await writeLibraryDB();
+   }else{
+    songs=dbSongs;
+    favorites=dbFavorites;
+   }
   }else{
-   // Primeira instalação: mantém a biblioteca inicial do aplicativo.
-   libraryUpdatedAt=new Date().toISOString();
+   // Migra automaticamente a biblioteca já existente no localStorage para o banco local.
+   await writeLibraryDB();
   }
-  // Sincroniza os dois armazenamentos com a fonte escolhida acima.
-  await writeLibraryDB(libraryUpdatedAt);
  }catch(e){
   console.warn('Banco local indisponível; usando armazenamento compatível:',e);
-  if(localSongs){songs=localSongs;if(localFavorites)favorites=localFavorites;}
-  libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
+  if(localSongs){songs=localSongs;favorites=localFavorites||favorites;}
  }
- try{
-  localStorage.setItem('louvores_songs',JSON.stringify(songs));
-  localStorage.setItem('louvores_favs',JSON.stringify(favorites));
-  localStorage.setItem('louvores_saved_at',libraryUpdatedAt);
- }catch(e){}
+ try{localStorage.setItem('louvores_songs',JSON.stringify(songs));localStorage.setItem('louvores_favs',JSON.stringify(favorites));}catch(e){}
 }
 function downloadText(filename,text,mime){
  const blob=new Blob([text],{type:mime});
@@ -3413,7 +3445,7 @@ function openSong(id){
  </div>
  <div class="detail-head"><div><div class="meta">${esc(s.category)} • ${esc(s.artist||'')}</div><h2>${esc(s.title)}</h2><div class="meta">Tom original: ${esc(s.key||'—')}</div></div></div>
  <div class="song-reading" id="songReading"><div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset)}</div>
- <div class="notice">Dica: para alinhar os acordes, mantenha cada linha de acordes exatamente acima da linha da letra. No celular, as linhas se ajustam automaticamente à largura da tela, mantendo os acordes e a letra legíveis.</div><div class="notice">${s.demo?'Esta é uma cifra demonstrativa criada para testar a transposição.':'Se a cifra ainda não estiver cadastrada, use “Adicionar” para inserir uma versão autorizada.'} As músicas adicionadas por você ficam salvas neste dispositivo.</div></div>
+ </div>
  <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>`;
  const boldControl=$('viewBold'),chordColorControl=$('viewChordColor'),colorControl=$('viewLyricColor'),fontControl=$('viewFont');
  if(boldControl)boldControl.checked=!!s.bold;
@@ -3443,6 +3475,8 @@ function resetTone(){offset=0;changeTone(0)}
  const LEFT_KEY='ArrowUp', RIGHT_KEY='ArrowDown';
  const FAST_STEP=7, FAST_INTERVAL=32;
  const pedal=Object.create(null);
+ let lastRightPress=0;
+ const DOUBLE_PRESS_MS=380;
  function isEditingField(target){return !!(target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)));}
  function readingIsOpen(){const layout=$('layout');return !!(layout && layout.classList.contains('song-open') && $('songReading'));}
  function moveQuickly(direction){
@@ -3461,6 +3495,20 @@ function resetTone(){offset=0;changeTone(0)}
   const key=event.key; if(key!==LEFT_KEY && key!==RIGHT_KEY)return;
   if(isEditingField(event.target) || !readingIsOpen())return;
   event.preventDefault(); event.stopImmediatePropagation();
+  // Dois toques rápidos no pedal direito pausam a rolagem automática.
+  if(key===RIGHT_KEY){
+   const now=Date.now();
+   if(now-lastRightPress<=DOUBLE_PRESS_MS){
+    lastRightPress=0;
+    if(pedal[RIGHT_KEY]){
+     if(pedal[RIGHT_KEY].fastTimer)clearInterval(pedal[RIGHT_KEY].fastTimer);
+     delete pedal[RIGHT_KEY];
+    }
+    stopAutoScroll();
+    return;
+   }
+   lastRightPress=now;
+  }
   // Uma pressão no pedal também inicia a rolagem automática, sem exigir o botão INICIAR.
   if(pedal[key])return;
   const wasAutoRunning=!!scrollTimer;
