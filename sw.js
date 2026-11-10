@@ -1,8 +1,9 @@
-const CACHE_NAME = 'louvores-adoracao-v3';
+const CACHE_NAME = 'louvores-adoracao-v4';
 
 const APP_FILES = [
   './',
   './index.html',
+  './supabase-account.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png'
