@@ -3095,11 +3095,11 @@ async function readLibraryDB(){
   request.onerror=()=>reject(request.error||new Error('Falha ao ler biblioteca local'));
  });
 }
-async function writeLibraryDB(){
+async function writeLibraryDB(updatedAt=new Date().toISOString()){
  const db=await openLibraryDB();
  return new Promise((resolve,reject)=>{
   const tx=db.transaction('state','readwrite');
-  tx.objectStore('state').put({songs,favorites,updatedAt:new Date().toISOString()},'library');
+  tx.objectStore('state').put({songs,favorites,updatedAt},'library');
   tx.oncomplete=()=>resolve(true);
   tx.onerror=()=>reject(tx.error||new Error('Falha ao gravar biblioteca local'));
   tx.onabort=()=>reject(tx.error||new Error('Gravação local cancelada'));
@@ -3107,10 +3107,12 @@ async function writeLibraryDB(){
 }
 async function persist(){
  let indexedDBError=null;
- try{await writeLibraryDB();}catch(e){indexedDBError=e;}
+ const updatedAt=new Date().toISOString();
+ try{await writeLibraryDB(updatedAt);}catch(e){indexedDBError=e;}
  try{
   localStorage.setItem('louvores_songs',JSON.stringify(songs));
   localStorage.setItem('louvores_favs',JSON.stringify(favorites));
+  localStorage.setItem('louvores_saved_at',updatedAt);
   return true;
  }catch(e){
   if(!indexedDBError)return true;
@@ -3119,34 +3121,47 @@ async function persist(){
  }
 }
 async function initializeLibraryStorage(){
- // Guarda a cópia persistida do localStorage antes de consultar o IndexedDB.
- // Um IndexedDB antigo/vazio não deve apagar uma biblioteca local mais completa.
+ // Preserva a biblioteca explícita do localStorage quando ela ainda não tem
+ // carimbo de data. Isso corrige instalações antigas em que o IndexedDB
+ // podia conter a lista de demonstração mais longa e sobrescrever a lista do usuário.
  const localSongs=Array.isArray(savedSongs)?songs.slice():null;
  const localFavorites=Array.isArray(readLocal('louvores_favs',null))?favorites.slice():null;
+ const localSavedAt=readLocal('louvores_saved_at',null);
+ let libraryUpdatedAt=typeof localSavedAt==='string'&&Number.isFinite(Date.parse(localSavedAt))?localSavedAt:null;
  try{
   const stored=await readLibraryDB();
   if(stored&&Array.isArray(stored.songs)){
    const dbSongs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
    const dbFavorites=Array.isArray(stored.favorites)?stored.favorites:[];
-   // Se a cópia persistida do localStorage tiver mais músicas, ela é mais completa.
-   // Isso evita que um banco IndexedDB vazio ou desatualizado zere a biblioteca.
-   if(localSongs&&localSongs.length>dbSongs.length){
+   const dbUpdatedAt=typeof stored.updatedAt==='string'&&Number.isFinite(Date.parse(stored.updatedAt))?stored.updatedAt:null;
+   // Sem carimbo local (bibliotecas criadas em versões anteriores), o localStorage
+   // é a cópia escolhida pelo usuário. Com carimbos, vence a cópia mais recente.
+   const preferLocal=!!localSongs&&(!libraryUpdatedAt||!dbUpdatedAt||Date.parse(libraryUpdatedAt)>=Date.parse(dbUpdatedAt));
+   if(preferLocal){
     songs=localSongs;
     favorites=localFavorites||dbFavorites;
-    await writeLibraryDB();
+    libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
+    await writeLibraryDB(libraryUpdatedAt);
    }else{
     songs=dbSongs;
     favorites=dbFavorites;
+    libraryUpdatedAt=dbUpdatedAt||new Date().toISOString();
    }
   }else{
-   // Migra automaticamente a biblioteca já existente no localStorage para o banco local.
-   await writeLibraryDB();
+   // Migra a biblioteca local existente para o banco local.
+   libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
+   await writeLibraryDB(libraryUpdatedAt);
   }
  }catch(e){
   console.warn('Banco local indisponível; usando armazenamento compatível:',e);
   if(localSongs){songs=localSongs;favorites=localFavorites||favorites;}
+  libraryUpdatedAt=libraryUpdatedAt||new Date().toISOString();
  }
- try{localStorage.setItem('louvores_songs',JSON.stringify(songs));localStorage.setItem('louvores_favs',JSON.stringify(favorites));}catch(e){}
+ try{
+  localStorage.setItem('louvores_songs',JSON.stringify(songs));
+  localStorage.setItem('louvores_favs',JSON.stringify(favorites));
+  localStorage.setItem('louvores_saved_at',libraryUpdatedAt||new Date().toISOString());
+ }catch(e){}
 }
 function downloadText(filename,text,mime){
  const blob=new Blob([text],{type:mime});
