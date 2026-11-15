@@ -3194,10 +3194,12 @@ async function initializeLibraryStorage(){
    const dbSongs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
    const dbFavorites=Array.isArray(stored.favorites)?stored.favorites:[];
    const localTime=Date.parse(localUpdatedAt||''),dbTime=Date.parse(stored.updatedAt||'');
+   const localHasTime=Number.isFinite(localTime),dbHasTime=Number.isFinite(dbTime);
    const localIsNewer=!!localSongs&&(
-    Number.isFinite(localTime)&&Number.isFinite(dbTime)
-     ? localTime>=dbTime
-     : localSongs.length>=dbSongs.length
+    localHasTime&&dbHasTime ? localTime>=dbTime :
+    localHasTime&&!dbHasTime ? true :
+    !localHasTime&&dbHasTime ? localSongs.length>dbSongs.length :
+    localSongs.length>=dbSongs.length
    );
    if(localIsNewer){
     songs=localSongs;favorites=localFavorites||dbFavorites;
