@@ -282,7 +282,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
       <span id="favCount" hidden>0</span>
       <div class="toolbar" style="margin:8px 0 0">
         <button class="soft" id="backupBtn" type="button">⬇ Fazer backup</button>
-        <button class="soft" id="cleanEmptyBtn" type="button">🧹 Limpar cadastros vazios</button>
+        <button class="soft" id="cleanEmptyBtn" type="button">🧹 Remover músicas sem cifras</button>
         <label class="soft restore-label" id="restoreBtn" for="restoreFile">⬆ Restaurar backup</label>
         <input id="restoreFile" class="ios-file-input" type="file" accept=".json,application/json">
         <a id="backupDownloadLink" class="backup-download-link" href="#" target="_blank" rel="noopener">Toque aqui para abrir o arquivo de backup</a>
@@ -3158,58 +3158,67 @@ async function readLibraryDB(){
   request.onerror=()=>reject(request.error||new Error('Falha ao ler biblioteca local'));
  });
 }
-async function writeLibraryDB(){
+async function writeLibraryDB(updatedAt=new Date().toISOString()){
  const db=await openLibraryDB();
  return new Promise((resolve,reject)=>{
   const tx=db.transaction('state','readwrite');
-  tx.objectStore('state').put({songs,favorites,updatedAt:new Date().toISOString()},'library');
+  tx.objectStore('state').put({songs,favorites,updatedAt},'library');
   tx.oncomplete=()=>resolve(true);
   tx.onerror=()=>reject(tx.error||new Error('Falha ao gravar biblioteca local'));
   tx.onabort=()=>reject(tx.error||new Error('Gravação local cancelada'));
  });
 }
 async function persist(){
- let indexedDBError=null;
- try{await writeLibraryDB();}catch(e){indexedDBError=e;}
+ const updatedAt=new Date().toISOString();
+ let indexedDBSaved=false,localSaved=false,indexedDBError=null,localStorageError=null;
+ try{await writeLibraryDB(updatedAt);indexedDBSaved=true;}catch(e){indexedDBError=e;}
  try{
   localStorage.setItem('louvores_songs',JSON.stringify(songs));
   localStorage.setItem('louvores_favs',JSON.stringify(favorites));
-  return true;
- }catch(e){
-  if(!indexedDBError)return true;
-  alert('Não foi possível salvar a biblioteca neste navegador. Mantenha esta página aberta e faça um backup JSON. Detalhe: '+(e&&e.name?e.name:(indexedDBError&&indexedDBError.message)||'erro de armazenamento'));
-  return false;
- }
+  localStorage.setItem('louvores_updated_at',updatedAt);
+  localSaved=true;
+ }catch(e){localStorageError=e;}
+ if(indexedDBSaved||localSaved)return true;
+ const detail=(localStorageError&&localStorageError.message)||(indexedDBError&&indexedDBError.message)||'erro de armazenamento';
+ alert('Não foi possível salvar a biblioteca neste navegador. Faça um backup JSON e confira as permissões de armazenamento. Detalhe: '+detail);
+ return false;
 }
 async function initializeLibraryStorage(){
- // Guarda a cópia persistida do localStorage antes de consultar o IndexedDB.
- // Um IndexedDB antigo/vazio não deve apagar uma biblioteca local mais completa.
  const localSongs=Array.isArray(savedSongs)?songs.slice():null;
  const localFavorites=Array.isArray(readLocal('louvores_favs',null))?favorites.slice():null;
+ const localUpdatedAt=readLocal('louvores_updated_at','');
+ let chosenUpdatedAt=localUpdatedAt||new Date().toISOString();
  try{
   const stored=await readLibraryDB();
   if(stored&&Array.isArray(stored.songs)){
    const dbSongs=stored.songs.filter(s=>s&&typeof s==='object'&&!Array.isArray(s)&&s.title);
    const dbFavorites=Array.isArray(stored.favorites)?stored.favorites:[];
-   // Se a cópia persistida do localStorage tiver mais músicas, ela é mais completa.
-   // Isso evita que um banco IndexedDB vazio ou desatualizado zere a biblioteca.
-   if(localSongs&&localSongs.length>dbSongs.length){
-    songs=localSongs;
-    favorites=localFavorites||dbFavorites;
-    await writeLibraryDB();
+   const localTime=Date.parse(localUpdatedAt||''),dbTime=Date.parse(stored.updatedAt||'');
+   const localIsNewer=!!localSongs&&(
+    Number.isFinite(localTime)&&Number.isFinite(dbTime)
+     ? localTime>=dbTime
+     : localSongs.length>=dbSongs.length
+   );
+   if(localIsNewer){
+    songs=localSongs;favorites=localFavorites||dbFavorites;
+    chosenUpdatedAt=localUpdatedAt||new Date().toISOString();
+    await writeLibraryDB(chosenUpdatedAt);
    }else{
-    songs=dbSongs;
-    favorites=dbFavorites;
+    songs=dbSongs;favorites=dbFavorites;
+    chosenUpdatedAt=stored.updatedAt||new Date().toISOString();
    }
   }else{
-   // Migra automaticamente a biblioteca já existente no localStorage para o banco local.
-   await writeLibraryDB();
+   await writeLibraryDB(chosenUpdatedAt);
   }
  }catch(e){
   console.warn('Banco local indisponível; usando armazenamento compatível:',e);
   if(localSongs){songs=localSongs;favorites=localFavorites||favorites;}
  }
- try{localStorage.setItem('louvores_songs',JSON.stringify(songs));localStorage.setItem('louvores_favs',JSON.stringify(favorites));}catch(e){}
+ try{
+  localStorage.setItem('louvores_songs',JSON.stringify(songs));
+  localStorage.setItem('louvores_favs',JSON.stringify(favorites));
+  localStorage.setItem('louvores_updated_at',chosenUpdatedAt);
+ }catch(e){}
 }
 function downloadText(filename,text,mime){
  const blob=new Blob([text],{type:mime});
@@ -3639,62 +3648,89 @@ async function deleteSong(id){
  const oldSongs=songs,oldFavorites=favorites;songs=songs.filter(x=>x.id!==id);favorites=favorites.filter(x=>x!==id);if(!await persist()){songs=oldSongs;favorites=oldFavorites;return;}
  if(current===id)backToList();render();
 }
+let savingSong=false;
 async function saveSong(){
+ const button=$('saveSong');
+ if(savingSong)return;
  const title=$('newTitle').value.trim();if(!title){alert('Digite o nome do louvor.');return}
- const data={title,artist:$('newArtist').value.trim(),category:$('newCat').value,key:$('newKey').value,chords:$('newChords').value.trim()||'Cifra ainda não cadastrada.',capo:$('newCapo').value.trim(),chordColor:safeColor($('chordColor').value,'#1d4f91'),lyricColor:safeColor($('lyricColor').value,'#172235'),fontFamily:$('songFont').value,bold:$('songBold').checked};
- let id;
- if(editingId!==null){
-  const index=songs.findIndex(x=>x.id===editingId);if(index<0){alert('Não encontrei esta música para editar.');return}
-  songs[index]={...songs[index],...data};id=editingId;
- }else{
-  id=songs.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1;songs.push({id,...data});
+ savingSong=true;if(button)button.disabled=true;
+ const previousSongs=songs.map(song=>({...song})),previousFavorites=favorites.slice();
+ try{
+  const data={title,artist:$('newArtist').value.trim(),category:$('newCat').value,key:$('newKey').value,chords:$('newChords').value.trim()||'Cifra ainda não cadastrada.',capo:$('newCapo').value.trim(),chordColor:safeColor($('chordColor').value,'#1d4f91'),lyricColor:safeColor($('lyricColor').value,'#172235'),fontFamily:$('songFont').value,bold:$('songBold').checked};
+  let id;
+  if(editingId!==null){
+   const index=songs.findIndex(x=>x.id===editingId);
+   if(index<0)throw new Error('Não encontrei esta música para editar.');
+   songs[index]={...songs[index],...data};id=editingId;
+  }else{
+   id=songs.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1;
+   songs.push({id,...data});
+  }
+  if(!await persist()){
+   songs=previousSongs;favorites=previousFavorites;render();
+   alert('A música não foi confirmada como salva. A lista anterior foi mantida. Faça um backup e tente novamente.');
+   return;
+  }
+  clearSongForm();$('addPanel').style.display='none';filter='Todos';render();
+  if(!songs.some(x=>x.id===current))current=null;
+  openSong(id);
+ }catch(e){
+  songs=previousSongs;favorites=previousFavorites;render();
+  alert('Não foi possível salvar o louvor. '+(e&&e.message?e.message:'Confira o armazenamento do navegador.'));
+ }finally{
+  savingSong=false;if(button)button.disabled=false;
  }
- if(!await persist()){alert('A música não foi confirmada como salva. Confira as permissões de armazenamento do navegador e tente novamente.');return;}clearSongForm();$('addPanel').style.display='none';filter='Todos';render();if(!songs.some(x=>x.id===current))current=null;openSong(id);
 }
 $('q').addEventListener('input',render);$('addTop').onclick=()=>{clearSongForm();showAdd()};$('cancelAdd').onclick=()=>showAdd(false);$('saveSong').onclick=saveSong;
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;render()});
 $('newKey').innerHTML=keyOptions.map(k=>`<option>${k}</option>`).join('');
-function hasRealSongContent(song){
- const fields=['chords','cifra','lyrics','letra','content','lyricsText','chordText'];
- const isPlaceholder=(value)=>{
-  if(typeof value!=='string')return true;
-  let t=value.replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ').replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g,' ').trim();
-  if(!t)return true;
-  // Textos automáticos exibidos em cadastros sem conteúdo.
-  t=t.replace(/letra\s+e\s+cifra\s+n[aã]o\s+foram\s+inclu[ií]das?\.?/gi,' ');
-  t=t.replace(/cifra\s+ainda\s+n[aã]o\s+cadastrada\.?/gi,' ');
-  t=t.replace(/letra\s+ainda\s+n[aã]o\s+cadastrada\.?/gi,' ');
-  t=t.replace(/abra\s+a\s+refer[eê]ncia\s+externa[^.]*\.?/gi,' ');
-  t=t.replace(/cole\s+aqui\s+uma\s+letra\/cifra[^.]*\.?/gi,' ');
-  t=t.replace(/dicas?\s+para\s+alinhar\s+os\s+acordes[^.]*\.?/gi,' ');
-  t=t.replace(/mantenha\s+cada\s+linha\s+de\s+acordes[^.]*\.?/gi,' ');
-  t=t.replace(/no\s+celular[^.]*linhas[^.]*\.?/gi,' ');
-  t=t.replace(/[\s.,;:!?()[\]{}\-–—]/g,'').trim();
-  return t.length===0;
+function hasRealChords(song){
+ const fields=['chords','cifra','chordText'];
+ const cleanText=value=>{
+  if(typeof value!=='string')return '';
+  return value.replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ')
+   .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g,' ')
+   .replace(/letra\s+e\s+cifra\s+n[aã]o\s+foram\s+inclu[ií]das?\.?/gi,' ')
+   .replace(/cifra\s+ainda\s+n[aã]o\s+cadastrada\.?/gi,' ')
+   .replace(/letra\s+ainda\s+n[aã]o\s+cadastrada\.?/gi,' ')
+   .replace(/abra\s+a\s+refer[eê]ncia\s+externa[^.]*\.?/gi,' ')
+   .replace(/cole\s+aqui\s+uma\s+letra\/cifra[^.]*\.?/gi,' ')
+   .replace(/dicas?\s+para\s+alinhar\s+os\s+acordes[^.]*\.?/gi,' ')
+   .replace(/mantenha\s+cada\s+linha\s+de\s+acordes[^.]*\.?/gi,' ')
+   .replace(/no\s+celular[^.]*linhas[^.]*\.?/gi,' ')
+   .replace(/[\u00A0]/g,' ');
  };
- return fields.some(field=>{
-  const value=song&&song[field];
-  if(typeof value!=='string'||!value.trim())return false;
-  return !isPlaceholder(value);
- });
+ for(const field of fields){
+  const text=cleanText(song&&song[field]);
+  if(!text.trim())continue;
+  const bracketed=[...text.matchAll(/\[([^\]]+)\]/g)];
+  if(bracketed.some(match=>{
+   const tokens=match[1].trim().split(/\s+/).filter(Boolean);
+   return tokens.length>0&&tokens.every(token=>chordTokenPattern.test(token));
+  }))return true;
+  const chordRows=text.replace(/\r\n?/g,'\n').split('\n')
+   .map(line=>line.trim().split(/\s+/).filter(Boolean))
+   .filter(tokens=>tokens.length>0&&tokens.every(token=>chordTokenPattern.test(token)));
+  if(chordRows.reduce((total,tokens)=>total+tokens.length,0)>=2)return true;
+ }
+ return false;
 }
 async function cleanEmptySongs(){
- const empty=songs.filter(song=>!hasRealSongContent(song));
- if(!empty.length){alert('Não encontrei cadastros sem letra e sem cifra. Nenhuma música foi alterada.');return;}
- if(!confirm('Encontrei '+empty.length+' cadastros sem letra e sem cifra. Você já informou que salvou o backup no notebook. Deseja preparar mais um backup antes de continuar?'))return;
- const ok=await makeBackup();
- if(!ok){alert('A limpeza foi cancelada. Primeiro salve o backup JSON em um local seguro. Nenhuma música foi excluída.');return;}
- const confirmText='O backup foi preparado. Serão removidos '+empty.length+' cadastros que não têm letra nem cifra. Músicas com letra OU cifra serão preservadas. Deseja continuar?';
+ const unchorded=songs.filter(song=>!hasRealChords(song));
+ if(!unchorded.length){alert('Todas as músicas cadastradas já possuem cifras. Nenhuma música foi alterada.');return;}
+ const backupOk=await makeBackup();
+ if(!backupOk){alert('A limpeza foi cancelada. Salve o backup JSON em um local seguro antes de continuar. Nenhuma música foi excluída.');return;}
+ const examples=unchorded.slice(0,6).map(song=>'• '+song.title).join('\n');
+ const confirmText='Backup preparado. Serão removidas '+unchorded.length+' músicas sem acordes.\n\nExemplos:\n'+examples+(unchorded.length>6?'\n• ...':'')+'\n\nTodas as músicas que possuem cifras serão mantidas. Deseja continuar?';
  if(!confirm(confirmText)){alert('Limpeza cancelada. Suas músicas continuam como estavam.');return;}
- const oldSongs=songs,oldFavorites=favorites;
- const kept=songs.filter(song=>hasRealSongContent(song));
+ const oldSongs=songs.map(song=>({...song})),oldFavorites=favorites.slice();
+ const kept=songs.filter(song=>hasRealChords(song));
  const keptIds=new Set(kept.map(song=>String(song.id)));
- songs=kept;
- favorites=favorites.filter(id=>keptIds.has(String(id)));
- if(!await persist()){songs=oldSongs;favorites=oldFavorites;return;}
- if(current&&!keptIds.has(String(current.id)))current=null;
+ songs=kept;favorites=favorites.filter(id=>keptIds.has(String(id)));
+ if(!await persist()){songs=oldSongs;favorites=oldFavorites;render();return;}
+ if(current&&!keptIds.has(String(current)))current=null;
  render();
- alert(empty.length+' cadastros vazios foram removidos. '+kept.length+' músicas com letra ou cifra foram preservadas.');
+ alert(unchorded.length+' músicas sem cifras foram removidas. '+kept.length+' músicas cifradas foram preservadas. O backup JSON contém a biblioteca anterior completa.');
 }
 $('cleanEmptyBtn').addEventListener('click',cleanEmptySongs);
 $('backupBtn').addEventListener('click',makeBackup);$('restoreFile').addEventListener('change',e=>{if(e.target.files&&e.target.files[0])restoreBackup(e.target.files[0]);e.target.value=''});
