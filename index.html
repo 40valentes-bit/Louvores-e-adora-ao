@@ -240,6 +240,9 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
   }
 }
 
+
+/* Destaque visual do filtro Favoritos; mantém os demais filtros inalterados. */
+.filters button.favorites-filter{background:#1d4f91!important;color:#fff2a8!important;border:1px solid #163f75!important}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -265,7 +268,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
         <p id="backupDownloadHelp" class="backup-download-help">No iPhone/iPad: toque no link acima. Quando o arquivo JSON abrir, use Compartilhar e escolha “Salvar em Arquivos”.</p>
       </div>
       <div class="filters">
-        <button class="soft" data-filter="Todos">Todos</button><button class="soft" data-filter="Harpa Cristã">Harpa Cristã</button><button class="soft" data-filter="Tradicionais">Tradicionais</button><button class="soft" data-filter="Congregacionais">Congregacionais</button><button class="soft" data-filter="Adoração">Adoração</button><button class="soft" data-filter="Favoritos">♥ Favoritos</button>
+        <button class="soft" data-filter="Todos">Todos</button><button class="soft" data-filter="Harpa Cristã">Domingo</button><button class="soft" data-filter="Tradicionais">Quinta</button><button class="soft" data-filter="Congregacionais">Outros</button><button class="soft" data-filter="Adoração">Adoração</button><button class="soft favorites-filter" data-filter="Favoritos">♥ Favoritos</button>
       </div>
     </div>
   </div>
