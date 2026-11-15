@@ -243,6 +243,27 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 
 /* Destaque visual do filtro Favoritos; mantém os demais filtros inalterados. */
 .filters button.favorites-filter{background:#1d4f91!important;color:#fff2a8!important;border:1px solid #163f75!important}
+
+/* Controles de tonalidade e capotraste: compactos e responsivos em telefone/tablet. */
+.layout.song-open .tone-tools{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex:1 1 100%;flex-wrap:wrap;padding:7px 8px;background:#eaf0f8;border:1px solid #d9e3ef;border-radius:10px}
+.layout.song-open .tone-stepper{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.layout.song-open .tone-tools .tone-caption{font-size:11px;font-weight:800;color:var(--navy);white-space:nowrap}
+.layout.song-open .tone-tools button{min-width:32px;width:32px;min-height:32px;padding:3px;background:#fff;color:var(--navy);border:1px solid #cbd7e5;border-radius:8px;font-size:18px;line-height:1}
+.layout.song-open .tone-tools .tone-current{min-width:64px;text-align:center;font-size:13px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.layout.song-open .tone-tools .tone-reset{width:auto;min-width:66px;padding:5px 8px;font-size:10px}
+.layout.song-open .capo-control{display:flex;align-items:center;gap:6px;margin:0;font-size:11px;font-weight:800;color:var(--navy);white-space:nowrap}
+.layout.song-open .capo-control select{width:auto;min-width:105px;max-width:125px;padding:7px 8px;font-size:12px}
+.layout.song-open .tone-summary{flex:1 1 100%;font-size:10px;line-height:1.3;color:#536171}
+.layout.song-open .format-tools .format-back-button{flex:0 0 auto!important;width:auto!important;min-width:92px!important;max-width:112px!important;min-height:36px!important;padding:8px 12px!important;font-size:12px!important;border-radius:9px!important}
+@media(max-width:600px){
+ .layout.song-open .tone-tools{gap:6px;padding:6px}
+ .layout.song-open .tone-stepper{gap:4px}
+ .layout.song-open .tone-tools .tone-current{min-width:52px;font-size:12px}
+ .layout.song-open .tone-tools button{min-width:29px;width:29px;min-height:30px}
+ .layout.song-open .tone-tools .tone-reset{min-width:58px;width:auto;font-size:9px}
+ .layout.song-open .capo-control select{min-width:92px;padding:6px}
+ .layout.song-open .format-tools .format-back-button{min-width:82px!important;max-width:94px!important;min-height:34px!important;font-size:11px!important}
+}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -3113,7 +3134,7 @@ if(savedSongs===null){
  seed.forEach(s=>{const k=(s.title+'|'+(s.artist||'')).toLocaleLowerCase('pt-BR');const idx=songs.findIndex(x=>(x.title+'|'+(x.artist||'')).toLocaleLowerCase('pt-BR')===k);if(idx<0){songs.push(s);knownSongs.add(k)}else if(s.chords&&!s.chords.startsWith('Letra e cifra não foram incluídas')&&(!songs[idx].chords||songs[idx].chords.startsWith('Letra e cifra não foram incluídas'))){songs[idx]={...songs[idx],...s,id:songs[idx].id}}});
 }
 let favorites=readLocal('louvores_favs',[]);if(!Array.isArray(favorites))favorites=[];
-let filter='Todos',current=null,offset=0,fontSize=18,scrollTimer=null,scrollSpeed=1,editingId=null;
+let filter='Todos',current=null,offset=0,capoPosition=0,fontSize=18,scrollTimer=null,scrollSpeed=1,editingId=null;
 const $=id=>document.getElementById(id);
 // Banco local do navegador (IndexedDB): funciona sem internet e guarda a biblioteca
 // separadamente do arquivo HTML. O localStorage permanece como cópia compatível.
@@ -3359,16 +3380,45 @@ function render(){
  $('list').innerHTML=arr.length?arr.map(s=>`<article class="song"><div><h3>${esc(s.title)}</h3><div class="meta">${esc(s.artist||'Artista não informado')} • ${esc(s.category)} • Tom ${esc(s.key||'—')}</div></div><div class="song-actions"><button class="icon" title="Favoritar" onclick="toggleFav(${s.id})">${favorites.includes(s.id)?'♥':'♡'}</button><button class="primary" onclick="openSong(${s.id})">Abrir</button><button class="soft" onclick="editSong(${s.id})">Editar</button><button class="soft" title="Excluir música" onclick="deleteSong(${s.id})">Excluir</button></div></article>`).join(''):'<div class="empty">Nenhum louvor encontrado. Experimente outra pesquisa ou adicione uma música.</div>';
 }
 async function toggleFav(id){const oldFavorites=favorites;favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];if(!await persist()){favorites=oldFavorites;return;}render();if(current===id)openSong(id)}
+const flatKeys=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const chordTokenPattern=/^[A-G](?:#|b)?(?:maj7|maj9|maj|min|m7|m9|m|dim7|dim|aug|sus2|sus4|sus|add9|add)?\d*(?:M)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?(?:°|º)?$/i;
+function transposeNote(note,semitones){
+ const match=String(note||'').match(/^([A-G])(#|b)?$/);
+ if(!match)return note;
+ const root=match[1],accidental=match[2]||'';
+ let index=keys.indexOf(root+(accidental==='#'?'#':''));
+ if(accidental==='b')index=(keys.indexOf(root)-1+12)%12;
+ if(index<0)return note;
+ const target=((index+Number(semitones))%12+12)%12;
+ return (accidental==='b'?flatKeys:keys)[target];
+}
+function transposeChordToken(token,semitones){
+ if(!chordTokenPattern.test(token))return token;
+ const match=token.match(/^([A-G](?:#|b)?)(.*)$/);
+ if(!match)return token;
+ let suffix=match[2],bass='';
+ const slash=suffix.lastIndexOf('/');
+ if(slash>=0){
+  const possibleBass=suffix.slice(slash+1);
+  if(/^[A-G](?:#|b)?$/.test(possibleBass)){
+   bass=possibleBass;
+   suffix=suffix.slice(0,slash+1);
+  }
+ }
+ return transposeNote(match[1],semitones)+suffix+(bass?transposeNote(bass,semitones):'');
+}
+function isChordLineForTranspose(line){
+ const tokens=String(line||'').trim().split(/\s+/).filter(Boolean);
+ return tokens.length>0&&tokens.every(token=>chordTokenPattern.test(token));
+}
 function transposeText(txt,n){
- const flatKeys=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
- return txt.replace(/(?<![A-Za-z])([A-G](?:#|b)?)(maj7|m7|m|7|sus4|sus2|dim|aug|add9)?(?![A-Za-z])/g,(all,note,suffix='')=>{
-  let ix=keys.indexOf(note);
-  if(ix<0&&note.endsWith('b'))ix=(keys.indexOf(note[0])-1+12)%12;
-  if(ix<0)return all;
-  const spelling=note.endsWith('b')?'flat':'sharp';
-  const target=(ix+n+120)%12;
-  return (spelling==='flat'?flatKeys:keys)[target]+suffix;
- });
+ return String(txt||'').replace(/\r\n?/g,'\n').split('\n').map(line=>{
+  if(isChordLineForTranspose(line))return line.replace(/\S+/g,token=>transposeChordToken(token,n));
+  return line.replace(/\[([^\]]+)\]/g,(all,inside)=>{
+   const tokens=inside.split(/(\s+)/);
+   return '['+tokens.map(token=>/\s+/.test(token)?token:transposeChordToken(token,n)).join('')+']';
+  });
+ }).join('\n');
 }
 let scrollRemainder=0;
 function updateScrollButtons(running){
@@ -3417,7 +3467,7 @@ function adjustScrollSpeed(delta){
 }
 function backToList(){stopAutoScroll();$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
- stopAutoScroll();current=id;offset=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
+ stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
@@ -3443,11 +3493,27 @@ function openSong(id){
    <button type="button" onclick="changeFont(-1)" aria-label="Diminuir tamanho do texto e dos acordes" title="Diminuir texto">−</button>
    <button type="button" onclick="changeFont(1)" aria-label="Aumentar tamanho do texto e dos acordes" title="Aumentar texto">+</button>
   </div>
+  <div class="tone-tools" aria-label="Transposição de tonalidade e capotraste">
+   <div class="tone-stepper">
+    <span class="tone-caption">TOM</span>
+    <button type="button" onclick="changeTone(-1)" aria-label="Baixar um semitom" title="Baixar um semitom">−</button>
+    <strong class="tone-current" id="toneLabel">Tom original</strong>
+    <button type="button" onclick="changeTone(1)" aria-label="Subir um semitom" title="Subir um semitom">+</button>
+    <button type="button" class="tone-reset" onclick="resetTone()" title="Voltar ao tom original">Original</button>
+   </div>
+   <label class="capo-control">Capotraste
+    <select id="capoSelect" onchange="setCapo(this.value)" aria-label="Posição do capotraste">
+     <option value="0">Sem capotraste</option>
+     <option value="1">Casa 1</option><option value="2">Casa 2</option><option value="3">Casa 3</option><option value="4">Casa 4</option><option value="5">Casa 5</option><option value="6">Casa 6</option><option value="7">Casa 7</option><option value="8">Casa 8</option><option value="9">Casa 9</option><option value="10">Casa 10</option><option value="11">Casa 11</option><option value="12">Casa 12</option>
+    </select>
+   </label>
+   <span class="tone-summary" id="toneSummary" aria-live="polite"></span>
+  </div>
   <button type="button" class="format-back-button" onclick="backToList()" aria-label="Voltar à lista de louvores" title="Voltar à lista">VOLTAR</button>
  </div>
  </div>
  <div class="detail-head"><div><div class="meta">${esc(s.category)} • ${esc(s.artist||'')}</div><h2>${esc(s.title)}</h2><div class="meta">Tom original: ${esc(s.key||'—')}</div></div></div>
- <div class="song-reading" id="songReading"><div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset)}</div>
+ <div class="song-reading" id="songReading"><div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset-capoPosition)}</div>
  </div>
  <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>`;
  const boldControl=$('viewBold'),chordColorControl=$('viewChordColor'),colorControl=$('viewLyricColor'),fontControl=$('viewFont');
@@ -3455,6 +3521,8 @@ function openSong(id){
  if(chordColorControl)chordColorControl.value=safeColor(s.chordColor,'#1d4f91');
  if(colorControl)colorControl.value=safeColor(s.lyricColor,'#172235');
  if(fontControl)fontControl.value=['Courier New','Consolas','Arial','Verdana','Georgia'].includes(s.fontFamily)?s.fontFamily:'Courier New';
+ const capoControl=$('capoSelect');if(capoControl)capoControl.value='0';
+ updateToneDisplay();
  applyViewStyle();
  const readingArea=$('songReading');
  if(readingArea){
@@ -3463,14 +3531,40 @@ function openSong(id){
   });
  }
 }
-function applyViewStyle(){const s=songs.find(x=>x.id===current),el=$('chordText');if(!s||!el)return;el.style.fontFamily='"'+(s.fontFamily||'Courier New')+'", monospace';el.style.fontWeight=s.bold?'700':'400';el.innerHTML=renderCifra(s,offset);}
+function applyViewStyle(){const s=songs.find(x=>x.id===current),el=$('chordText');if(!s||!el)return;el.style.fontFamily='"'+(s.fontFamily||'Courier New')+'", monospace';el.style.fontWeight=s.bold?'700':'400';el.innerHTML=renderCifra(s,offset-capoPosition);}
 async function updateViewPreference(key,value){const s=songs.find(x=>x.id===current);if(!s)return;const old=s[key];s[key]=value;if(!await persist()){s[key]=old;return;}applyViewStyle();}
 function setViewBold(v){updateViewPreference('bold',!!v)}
 function setViewChordColor(v){updateViewPreference('chordColor',safeColor(v,'#1d4f91'))}
 function setViewColor(v){updateViewPreference('lyricColor',safeColor(v,'#172235'))}
 function setViewFont(v){const allowed=['Courier New','Consolas','Arial','Verdana','Georgia'];updateViewPreference('fontFamily',allowed.includes(v)?v:'Courier New')}
-function changeTone(n){offset+=n;const s=songs.find(x=>x.id===current);$('chordText').innerHTML=renderCifra(s,offset);$('toneLabel').textContent='Transposição: '+(offset>0?'+':'')+offset+' semitons'}
-function resetTone(){offset=0;changeTone(0)}
+function updateToneDisplay(){
+ const s=songs.find(x=>x.id===current);if(!s)return;
+ const original=String(s.key||'').trim();
+ const target=original?transposeChordToken(original,offset):'';
+ const shape=original?transposeChordToken(original,offset-capoPosition):'';
+ const label=$('toneLabel'),summary=$('toneSummary');
+ if(label)label.textContent=target||((offset>0?'+':'')+offset+' st');
+ if(summary){
+  if(original){
+   summary.textContent=capoPosition>0?'Formas dos acordes: '+shape+' • Com capotraste '+capoPosition+', o tom que soa é '+target+'.':'Tom da música: '+target+'.';
+  }else{
+   summary.textContent=capoPosition>0?'Capotraste na casa '+capoPosition+' • Acordes ajustados para essa posição.':'Ajuste o tom em semitons; capotraste opcional.';
+  }
+ }
+}
+function refreshTransposition(){
+ const s=songs.find(x=>x.id===current),el=$('chordText');
+ if(s&&el)el.innerHTML=renderCifra(s,offset-capoPosition);
+ updateToneDisplay();
+}
+function changeTone(n){offset+=Number(n)||0;refreshTransposition()}
+function resetTone(){offset=0;refreshTransposition()}
+function setCapo(value){
+ const next=Number(value);
+ if(!Number.isFinite(next))return;
+ capoPosition=Math.max(0,Math.min(12,Math.round(next)));
+ refreshTransposition();
+}
 
 // Pedal Bluetooth Cube Turner Pro — aceleração independente dos controles de pausa/rolagem.
 // Pedal esquerdo (ArrowUp): acelera para baixo. Pedal direito (ArrowDown): acelera para cima.
@@ -3531,7 +3625,7 @@ function resetTone(){offset=0;changeTone(0)}
  window.addEventListener('blur',releaseAll);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
 })();
-function copyCifra(){const s=songs.find(x=>x.id===current);const t=transposeText(s.chords,offset);if(navigator.clipboard)navigator.clipboard.writeText(s.title+'\\n\\n'+t).then(()=>alert('Cifra copiada!'));else alert('Selecione e copie a cifra.')}
+function copyCifra(){const s=songs.find(x=>x.id===current);const t=transposeText(s.chords,offset-capoPosition);if(navigator.clipboard)navigator.clipboard.writeText(s.title+'\\n\\n'+t).then(()=>alert('Cifra copiada!'));else alert('Selecione e copie a cifra.')}
 function clearSongForm(){['newTitle','newArtist','newChords','newCapo'].forEach(x=>$(x).value='');$('newCat').value='Congregacionais';$('newKey').value='C';$('chordColor').value='#1d4f91';$('lyricColor').value='#172235';$('songFont').value='Courier New';$('songBold').checked=false;editingId=null;$('formTitle').textContent='Adicionar louvor à sua biblioteca';$('saveSong').textContent='Salvar louvor'}
 function showAdd(show=true){$('addPanel').style.display=show?'block':'none';if(show)$('newTitle').focus();else clearSongForm()}
 function editSong(id){
