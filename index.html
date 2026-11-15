@@ -3175,7 +3175,7 @@ async function persist(){
  try{
   localStorage.setItem('louvores_songs',JSON.stringify(songs));
   localStorage.setItem('louvores_favs',JSON.stringify(favorites));
-  localStorage.setItem('louvores_updated_at',updatedAt);
+  localStorage.setItem('louvores_updated_at',JSON.stringify(updatedAt));
   localSaved=true;
  }catch(e){localStorageError=e;}
  if(indexedDBSaved||localSaved)return true;
@@ -3217,7 +3217,7 @@ async function initializeLibraryStorage(){
  try{
   localStorage.setItem('louvores_songs',JSON.stringify(songs));
   localStorage.setItem('louvores_favs',JSON.stringify(favorites));
-  localStorage.setItem('louvores_updated_at',chosenUpdatedAt);
+  localStorage.setItem('louvores_updated_at',JSON.stringify(chosenUpdatedAt));
  }catch(e){}
 }
 function downloadText(filename,text,mime){
