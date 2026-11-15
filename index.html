@@ -3559,8 +3559,8 @@ function updateToneDisplay(){
  if(summary){
   const capoLabel=capoPosition===0?'Sem capotraste':capoPosition+'ª casa';
   summary.textContent=original
-   ?'Tom: '+target+(capoPosition>0?' (com forma de '+shape+')':'')+'\\nCapotraste: '+capoLabel
-   :'Capotraste: '+capoLabel+'\\nAjuste o tom pelos controles acima.';
+   ?'Tom: '+target+(capoPosition>0?' (com forma de '+shape+')':'')+'\nCapotraste: '+capoLabel
+   :'Capotraste: '+capoLabel+'\nAjuste o tom pelos controles acima.';
  }
 }
 function refreshTransposition(){
