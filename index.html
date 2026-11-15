@@ -3552,7 +3552,8 @@ function updateToneDisplay(){
  const s=songs.find(x=>x.id===current);if(!s)return;
  const original=String(s.key||'').trim();
  // O capotraste eleva o tom que soa, mas mantém a forma dos acordes.
- const target=original?transposeChordToken(original,offset+capoPosition):'';
+ const targetRaw=original?transposeChordToken(original,offset+capoPosition):'';
+ const target=targetRaw.replace(/^(C#|D#|F#|G#|A#)(.*)$/,(all,root,suffix)=>({ 'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb' }[root]+suffix));
  const shape=original?transposeChordToken(original,offset):'';
  const label=$('toneLabel'),summary=$('toneSummary');
  if(label)label.textContent=target||((offset+capoPosition>0?'+':'')+(offset+capoPosition)+' st');
