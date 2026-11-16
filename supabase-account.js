@@ -129,9 +129,12 @@ async function syncAll(){
  if(syncBusy||!approved)return;
  syncBusy=true;byId('cloudSync').disabled=true;status('Sincronizando músicas e favoritos…');
  try{
+  const local=window.LouvoresApp.getSongs();
+  for(const song of local){
+   if(!await publishSong(song))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
+  }
   const {data:remote,error}=await client.from('shared_songs').select('id,owner_id,title,artist,category,musical_key,capo,chords,chord_color,lyric_color,font_family,bold,source_local_id,created_at').order('created_at');
   if(error)throw error;
-  const local=window.LouvoresApp.getSongs();
   const seen=new Set(local.map(songKey));
   let nextId=local.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1,added=0;
   (remote||[]).forEach(row=>{
