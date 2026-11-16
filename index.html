@@ -3751,6 +3751,12 @@ async function cleanEmptySongs(){
 }
 $('cleanEmptyBtn').addEventListener('click',cleanEmptySongs);
 $('backupBtn').addEventListener('click',makeBackup);$('restoreFile').addEventListener('change',e=>{if(e.target.files&&e.target.files[0])restoreBackup(e.target.files[0]);e.target.value=''});
+window.LouvoresApp={
+ getSongs:()=>songs,
+ getFavorites:()=>favorites.slice(),
+ persist,
+ setFavorites:async ids=>{const previous=favorites;favorites=Array.from(new Set(Array.isArray(ids)?ids:[]));if(!await persist()){favorites=previous;return false;}render();return true;}
+};
 initializeLibraryStorage().then(()=>{try{render();}catch(err){console.error('Falha ao carregar a lista de louvores:',err);document.body.innerHTML='<main style="font:16px Arial;padding:24px;max-width:700px;margin:auto"><h2>Não foi possível carregar a lista</h2><p>O aplicativo encontrou um erro ao iniciar. Não apague seus backups. Feche esta página e abra novamente o arquivo.</p><p style="color:#666">Detalhe técnico: '+String(err&&err.message||err).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</p></main>'; }});
 </script>
 
