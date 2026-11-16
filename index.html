@@ -3391,7 +3391,7 @@ function render(){
  $('count').textContent=songs.length;$('favCount').textContent=favorites.length;
  $('list').innerHTML=arr.length?arr.map(s=>`<article class="song"><div><h3>${esc(s.title)}</h3><div class="meta">${esc(s.artist||'Artista não informado')} • ${esc(s.category)} • Tom ${esc(s.key||'—')}</div></div><div class="song-actions"><button class="icon" title="Favoritar" onclick="toggleFav(${s.id})">${favorites.includes(s.id)?'♥':'♡'}</button><button class="primary" onclick="openSong(${s.id})">Abrir</button><button class="soft" onclick="editSong(${s.id})">Editar</button><button class="soft" title="Excluir música" onclick="deleteSong(${s.id})">Excluir</button></div></article>`).join(''):'<div class="empty">Nenhum louvor encontrado. Experimente outra pesquisa ou adicione uma música.</div>';
 }
-async function toggleFav(id){const oldFavorites=favorites;favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];if(!await persist()){favorites=oldFavorites;return;}render();if(current===id)openSong(id)}
+async function toggleFav(id){const oldFavorites=favorites;favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];if(!await persist()){favorites=oldFavorites;return;}render();if(window.LouvoresCloud&&window.LouvoresCloud.isApproved())window.LouvoresCloud.saveSettings().catch(e=>console.warn('Favoritos não sincronizados:',e));if(current===id)openSong(id)}
 const flatKeys=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const chordTokenPattern=/^[A-G](?:#|b)?(?:maj7|maj9|maj|min|m7|m9|m|dim7|dim|aug|sus2|sus4|sus|add9|add)?\d*(?:M)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?(?:°|º)?$/i;
 function transposeNote(note,semitones){
@@ -3684,6 +3684,7 @@ async function saveSong(){
    alert('A música não foi confirmada como salva. A lista anterior foi mantida. Faça um backup e tente novamente.');
    return;
   }
+  if(window.LouvoresCloud&&window.LouvoresCloud.isApproved())window.LouvoresCloud.publishSong(songs.find(x=>x.id===id)).catch(e=>console.warn('Música salva localmente; envio à nuvem pendente:',e));
   clearSongForm();$('addPanel').style.display='none';filter='Todos';render();
   if(!songs.some(x=>x.id===current))current=null;
   openSong(id);
@@ -3747,6 +3748,12 @@ async function cleanEmptySongs(){
 }
 $('cleanEmptyBtn').addEventListener('click',cleanEmptySongs);
 $('backupBtn').addEventListener('click',makeBackup);$('restoreFile').addEventListener('change',e=>{if(e.target.files&&e.target.files[0])restoreBackup(e.target.files[0]);e.target.value=''});
+window.LouvoresApp={
+ getSongs:()=>songs,
+ getFavorites:()=>favorites.slice(),
+ persist,
+ setFavorites:async ids=>{const previous=favorites;favorites=Array.from(new Set(Array.isArray(ids)?ids:[]));if(!await persist()){favorites=previous;return false;}render();return true;}
+};
 initializeLibraryStorage().then(()=>{try{render();}catch(err){console.error('Falha ao carregar a lista de louvores:',err);document.body.innerHTML='<main style="font:16px Arial;padding:24px;max-width:700px;margin:auto"><h2>Não foi possível carregar a lista</h2><p>O aplicativo encontrou um erro ao iniciar. Não apague seus backups. Feche esta página e abra novamente o arquivo.</p><p style="color:#666">Detalhe técnico: '+String(err&&err.message||err).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</p></main>'; }});
 </script>
 
@@ -3759,5 +3766,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   });
 }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-account.js"></script>
 
 </body></html>
