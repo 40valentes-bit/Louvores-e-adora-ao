@@ -75,10 +75,19 @@ async function joinSession(){
   const hash=await digest(invite);
   const {data,error}=await c.from('live_sessions').select('*').eq('invite_code_hash',hash).eq('status','active').maybeSingle();
   if(error)throw error;if(!data)throw new Error('Código inválido ou sessão encerrada.');
-  const {count,error:countError}=await c.from('live_devices').select('*',{count:'exact',head:true}).eq('session_id',data.id).eq('authorized',true);
-  if(countError)throw countError;if((count||0)>=MAX_DEVICES)throw new Error('Esta sessão já atingiu o limite de cinco aparelhos.');
-  const {error:deviceError}=await c.from('live_devices').upsert({session_id:data.id,device_id:deviceId,device_name:deviceName,role:'participant',authorized:true,last_seen_at:new Date().toISOString()},{onConflict:'session_id,device_id'});
-  if(deviceError)throw deviceError;
+  const {data:existing,error:existingError}=await c.from('live_devices').select('authorized').eq('session_id',data.id).eq('device_id',deviceId).maybeSingle();
+  if(existingError)throw existingError;
+  if(existing&&!existing.authorized)throw new Error('Este aparelho teve o acesso revogado pelo principal.');
+  if(!existing){
+   const {count,error:countError}=await c.from('live_devices').select('*',{count:'exact',head:true}).eq('session_id',data.id).eq('authorized',true);
+   if(countError)throw countError;
+   if((count||0)>=MAX_DEVICES)throw new Error('Esta sessão já atingiu o limite de cinco aparelhos.');
+   const {error:deviceError}=await c.from('live_devices').insert({session_id:data.id,device_id:deviceId,device_name:deviceName,role:'participant',authorized:true});
+   if(deviceError)throw deviceError;
+  }else{
+   const {error:touchError}=await c.from('live_devices').update({last_seen_at:new Date().toISOString()}).eq('session_id',data.id).eq('device_id',deviceId);
+   if(touchError)throw touchError;
+  }
   session=data;role='participant';await connectChannel();startHeartbeat();
   const {data:latest,error:stateError}=await c.from('live_sessions').select('*').eq('id',session.id).single();
   if(!stateError&&latest)applyState(latest);
@@ -110,7 +119,7 @@ async function publishState(force){
  const now=Date.now();
  if(force||now-lastPersist>1000){
   lastPersist=now;
-  const {error}=await client().from('live_sessions').update({song_key:state.song_key,song_title:state.song_title,scroll_top:state.scroll_top,scroll_speed:state.scroll_speed,is_scrolling:state.is_scrolling,state_version:Number(session.state_version||0)+1,updated_at:state.updated_at}).eq('id',session.id);
+  const {error}=await client().from('live_sessions').update({song_key:state.song_key,song_title:state.song_title,scroll_top:state.scroll_top,scroll_speed:state.scroll_speed,is_scrolling:state.is_scrolling,state_version:Date.now(),updated_at:state.updated_at}).eq('id',session.id);
   if(error)console.warn('Falha ao salvar estado da sessão:',error.message);
  }
 }
