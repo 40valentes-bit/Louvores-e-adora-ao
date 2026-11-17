@@ -3388,7 +3388,7 @@ function renderCifra(song,semitones){
 function render(){
  // Evita que o preenchimento automático do navegador transforme o e-mail em busca de música.
  const searchField=$('q');
- if(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(searchField.value.trim()))searchField.value='';
+ if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(searchField.value.trim()))searchField.value='';
  document.querySelectorAll('[data-filter]').forEach(button=>{
   const active=button.dataset.filter===filter;
   button.classList.toggle('is-active',active);
