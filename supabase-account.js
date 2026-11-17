@@ -106,11 +106,13 @@ async function loadPending(){
  });
 }
 function songKey(s){return String(s.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(s.artist||'').trim().toLocaleLowerCase('pt-BR');}
+function hasUsableChords(s){const value=String(s&&s.chords||'').trim();return !!value&&!/^Letra e cifra não foram incluídas\./i.test(value);}
 function toCloudSong(s){
  return {owner_id:user.id,title:s.title,artist:s.artist||'',category:s.category||'',musical_key:s.key||'',capo:s.capo||'',chords:s.chords||'',chord_color:s.chordColor||'',lyric_color:s.lyricColor||'',font_family:s.fontFamily||'',bold:!!s.bold,source_local_id:String(s.id)};
 }
 async function publishSong(song){
  if(!client||!user||!approved||!song||!song.title)return false;
+ if(!hasUsableChords(song))return true;
  const row=toCloudSong(song);
  const {error}=await client.from('shared_songs').upsert(row,{onConflict:'owner_id,source_local_id'});
  if(error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+error.message,true);return false;}
@@ -158,6 +160,17 @@ async function syncAll(){
  syncBusy=true;byId('cloudSync').disabled=true;status('Sincronizando músicas e favoritos…');
  try{
   const local=window.LouvoresApp.getSongs();
+  const beforeCleanup=local.slice();
+  const favoriteKeysBefore=window.LouvoresApp.getFavorites().map(id=>beforeCleanup.find(song=>String(song.id)===String(id))).filter(hasUsableChords).map(songKey);
+  const bestByKey=new Map();
+  for(const song of beforeCleanup){
+   if(!song.title||!hasUsableChords(song))continue;
+   const key=songKey(song),current=bestByKey.get(key);
+   if(!current||String(song.chords||'').length>String(current.chords||'').length)bestByKey.set(key,song);
+  }
+  local.splice(0,local.length,...bestByKey.values());
+  const removedLocal=beforeCleanup.length-local.length;
+  if(removedLocal&&!await window.LouvoresApp.persist())throw new Error('Não foi possível salvar a limpeza local; nenhuma música da nuvem foi removida.');
   for(const song of local){
    if(!await publishSong(song))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
   }
@@ -166,7 +179,7 @@ async function syncAll(){
   const cloudSettings=await readCloudSettings();
   const seen=new Set(local.map(songKey));
   let nextId=local.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1,added=0;
-  (remote||[]).forEach(row=>{
+  (remote||[]).filter(hasUsableChords).forEach(row=>{
    const key=songKey(row);
    if(!row.title||seen.has(key))return;
    local.push({id:nextId++,title:row.title,artist:row.artist||'',category:row.category||'Congregacionais',key:row.musical_key||'C',capo:row.capo||'',chords:row.chords||'',chordColor:row.chord_color||'#1d4f91',lyricColor:row.lyric_color||'#172235',fontFamily:row.font_family||'Courier New',bold:!!row.bold,shared:true});
@@ -188,16 +201,12 @@ async function syncAll(){
   }
   if((added||reordered)&&!await window.LouvoresApp.persist())throw new Error('As músicas recebidas ou a nova ordem não puderam ser salvas neste aparelho.');
   const keys=Array.isArray(cloudSettings.favorite_song_keys)?cloudSettings.favorite_song_keys:[];
-  const localFavoriteKeys=window.LouvoresApp.getFavorites().map(id=>{
-   const song=local.find(item=>String(item.id)===String(id));
-   return song?songKey(song):null;
-  }).filter(Boolean);
-  const mergedKeys=new Set([...keys,...localFavoriteKeys]);
+  const mergedKeys=new Set([...keys,...favoriteKeysBefore]);
   const ids=local.filter(song=>mergedKeys.has(songKey(song))).map(song=>song.id);
   if(!await window.LouvoresApp.setFavorites(ids))throw new Error('Os favoritos não puderam ser salvos neste aparelho.');
   cloudStateMerged=true;
   await saveSettings();
-  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s). Ordem oficial: '+(orderKeys&&orderKeys.length?orderMatched+'/'+local.length+' músicas reconhecidas; '+(reordered?'lista reordenada e salva':'lista já estava nessa ordem'):'não encontrada na nuvem')+'. Nenhuma música local foi substituída.');
+  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); '+removedLocal+' registro(s) sem cifra ou duplicado(s) removido(s) deste aparelho. Ordem oficial: '+(orderKeys&&orderKeys.length?orderMatched+'/'+local.length+' músicas reconhecidas; '+(reordered?'lista reordenada e salva':'lista já estava nessa ordem'):'não encontrada na nuvem')+'. Cifras válidas preservadas.');
  }catch(e){status('A sincronização não foi concluída: '+(e.message||e),true);}
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
 }
