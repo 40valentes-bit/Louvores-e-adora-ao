@@ -63,7 +63,11 @@ async function startAsLeader(){
   if(deviceError)throw deviceError;
   $('liveCodeValue').textContent=invite;$('liveCodeBox').style.display='block';
   await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código com até quatro aparelhos.');
- }catch(e){\n  if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;\n  if(session&&role==='leader'){try{await c.from('live_sessions').delete().eq('id',session.id);}catch(_){}}\n  say('Não foi possível iniciar: '+(e.message||e),true);session=null;role=null;\n }
+ }catch(e){
+  if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
+  if(session&&role==='leader'){try{await c.from('live_sessions').delete().eq('id',session.id);}catch(_){}}
+  say('Não foi possível iniciar: '+(e.message||e),true);session=null;role=null;
+ }
  finally{$('liveStartBtn').disabled=false;}
 }
 async function joinSession(){
@@ -92,11 +96,18 @@ async function joinSession(){
   const {data:latest,error:stateError}=await c.from('live_sessions').select('*').eq('id',session.id).single();
   if(!stateError&&latest)applyState(latest);
   await loadDevices();await refreshPanel();say('Aparelho autorizado e conectado. Agora acompanha o aparelho principal.');
- }catch(e){\n  if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;\n  if(session&&role==='participant'){try{await c.from('live_devices').delete().eq('session_id',session.id).eq('device_id',deviceId);}catch(_){}}\n  session=null;role=null;document.body.classList.remove('live-follower');\n  say('Não foi possível conectar: '+(e.message||e),true);\n }
+ }catch(e){
+  if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
+  if(session&&role==='participant'){try{await c.from('live_devices').delete().eq('session_id',session.id).eq('device_id',deviceId);}catch(_){}}
+  session=null;role=null;document.body.classList.remove('live-follower');
+  say('Não foi possível conectar: '+(e.message||e),true);
+ }
  finally{$('liveJoinBtn').disabled=false;}
 }
 async function connectChannel(){
- const c=client();if(!c)throw new Error('Conta Louvores não conectada.');\n if(c.realtime&&typeof c.realtime.setAuth==='function')await c.realtime.setAuth();\n if(channel)await c.removeChannel(channel);
+ const c=client();if(!c)throw new Error('Conta Louvores não conectada.');
+ if(c.realtime&&typeof c.realtime.setAuth==='function')await c.realtime.setAuth();
+ if(channel)await c.removeChannel(channel);
  channel=c.channel('louvores-live:'+session.id,{config:{private:true,presence:{key:deviceId}}});
  channel.on('broadcast',{event:'state'},({payload})=>{if(role==='participant')applyState(payload);});
  channel.on('broadcast',{event:'revoke'},({payload})=>{if(role==='participant'&&payload&&(payload.device_id===deviceId||payload.device_id==='*')){leaveLocal('O aparelho principal revogou este acesso.');}});
