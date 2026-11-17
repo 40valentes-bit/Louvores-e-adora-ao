@@ -279,7 +279,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
   <div class="fixed-area">
     <header><div class="brand">Aplicativo de Musicas</div><h1>Louvores &amp; Adoração</h1></header>
     <div class="wrap">
-      <div class="search"><input id="q" name="louvores-song-search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pesquisar louvor ou artista..." aria-label="Pesquisar"><div class="search-actions"><button class="gold" id="addTop">＋ Adicionar</button><div class="song-count-box" aria-live="polite"><span>Louvores cadastrados</span><strong id="count">0</strong></div></div></div>
+      <div class="search"><input id="q" name="louvores-search-field-x7" type="search" autocomplete="new-password" readonly onfocus="this.removeAttribute(\'readonly\');if(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(this.value.trim()))this.value=\'\'" autocapitalize="off" spellcheck="false" placeholder="Pesquisar louvor ou artista..." aria-label="Pesquisar"><div class="search-actions"><button class="gold" id="addTop">＋ Adicionar</button><div class="song-count-box" aria-live="polite"><span>Louvores cadastrados</span><strong id="count">0</strong></div></div></div>
       <span id="favCount" hidden>0</span>
       <div class="toolbar" style="margin:8px 0 0">
         <button class="soft" id="backupBtn" type="button">⬇ Fazer backup</button>
@@ -3388,6 +3388,7 @@ function renderCifra(song,semitones){
 function render(){
  // Evita que o preenchimento automático do navegador transforme o e-mail em busca de música.
  const searchField=$('q');
+ // Alguns navegadores ignoram autocomplete=off e injetam o e-mail salvo na busca.
  if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(searchField.value.trim()))searchField.value='';
  document.querySelectorAll('[data-filter]').forEach(button=>{
   const active=button.dataset.filter===filter;
