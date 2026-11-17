@@ -90,10 +90,10 @@ async function connectChannel(){
  const c=client();if(channel)await c.removeChannel(channel);
  channel=c.channel('louvores-live:'+session.id,{config:{private:true,presence:{key:deviceId}}});
  channel.on('broadcast',{event:'state'},({payload})=>{if(role==='participant')applyState(payload);});
- channel.on('broadcast',{event:'revoke'},({payload})=>{if(role==='participant'&&payload&&payload.device_id===deviceId){leaveLocal('O aparelho principal revogou este acesso.');}});
- channel.on('presence',{event:'sync'},()=>{if(role==='leader')loadDevices();});
+ channel.on('broadcast',{event:'revoke'},({payload})=>{if(role==='participant'&&payload&&(payload.device_id===deviceId||payload.device_id==='*')){leaveLocal('O aparelho principal revogou este acesso.');}});
+ 
  await new Promise((resolve,reject)=>channel.subscribe(status=>{if(status==='SUBSCRIBED')resolve();if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')reject(new Error('Falha ao conectar o canal privado. Verifique a autorização Realtime do Supabase.'));}));
- await channel.track({device_id:deviceId,device_name:deviceName,role,online:true});
+
  if(role==='leader')publishState(true);
  document.body.classList.toggle('live-follower',role==='participant');
 }
