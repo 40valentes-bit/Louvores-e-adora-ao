@@ -242,7 +242,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 
 
 /* Destaque visual do filtro Favoritos; mantém os demais filtros inalterados. */
-.filters button.favorites-filter{background:#1d4f91!important;color:#fff2a8!important;border:1px solid #163f75!important}
+.filters button.is-active{background:#1d4f91!important;color:#fff!important;border:1px solid #163f75!important}.filters button.favorites-filter.is-active{color:#fff2a8!important}
 
 /* Controles de tonalidade e capotraste: compactos e responsivos em telefone/tablet. */
 .layout.song-open .tone-tools{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex:1 1 100%;flex-wrap:wrap;padding:7px 8px;background:#fff4d6;border:1px solid #f0d58a;border-radius:10px}
@@ -279,7 +279,7 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
   <div class="fixed-area">
     <header><div class="brand">Aplicativo de Musicas</div><h1>Louvores &amp; Adoração</h1></header>
     <div class="wrap">
-      <div class="search"><input id="q" placeholder="Pesquisar louvor ou artista..." aria-label="Pesquisar"><div class="search-actions"><button class="gold" id="addTop">＋ Adicionar</button><div class="song-count-box" aria-live="polite"><span>Louvores cadastrados</span><strong id="count">0</strong></div></div></div>
+      <div class="search"><input id="q" name="louvores-song-search" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pesquisar louvor ou artista..." aria-label="Pesquisar"><div class="search-actions"><button class="gold" id="addTop">＋ Adicionar</button><div class="song-count-box" aria-live="polite"><span>Louvores cadastrados</span><strong id="count">0</strong></div></div></div>
       <span id="favCount" hidden>0</span>
       <div class="toolbar" style="margin:8px 0 0">
         <button class="soft" id="backupBtn" type="button">⬇ Fazer backup</button>
@@ -3386,7 +3386,15 @@ function renderCifra(song,semitones){
 }
 
 function render(){
- const query=$('q').value.toLocaleLowerCase('pt-BR');
+ // Evita que o preenchimento automático do navegador transforme o e-mail em busca de música.
+ const searchField=$('q');
+ if(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(searchField.value.trim()))searchField.value='';
+ document.querySelectorAll('[data-filter]').forEach(button=>{
+  const active=button.dataset.filter===filter;
+  button.classList.toggle('is-active',active);
+  button.setAttribute('aria-pressed',String(active));
+ });
+ const query=searchField.value.toLocaleLowerCase('pt-BR');
  let arr=songs.filter(s=>(filter==='Todos'||(filter==='Favoritos'?favorites.includes(s.id):s.category===filter)) && (s.title+' '+s.artist).toLocaleLowerCase('pt-BR').includes(query));
  $('count').textContent=songs.length;$('favCount').textContent=favorites.length;
  $('list').innerHTML=arr.length?arr.map(s=>`<article class="song"><div><h3>${esc(s.title)}</h3><div class="meta">${esc(s.artist||'Artista não informado')} • ${esc(s.category)} • Tom ${esc(s.key||'—')}</div></div><div class="song-actions"><button class="icon" title="Favoritar" onclick="toggleFav(${s.id})">${favorites.includes(s.id)?'♥':'♡'}</button><button class="primary" onclick="openSong(${s.id})">Abrir</button><button class="soft" onclick="editSong(${s.id})">Editar</button><button class="soft" title="Excluir música" onclick="deleteSong(${s.id})">Excluir</button></div></article>`).join(''):'<div class="empty">Nenhum louvor encontrado. Experimente outra pesquisa ou adicione uma música.</div>';
