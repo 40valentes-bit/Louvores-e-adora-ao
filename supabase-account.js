@@ -114,16 +114,26 @@ async function publishSong(song){
  if(!client||!user||!approved||!song||!song.title)return false;
  if(!hasUsableChords(song))return true;
  const row=toCloudSong(song);
- // Primeiro atualiza pelo identificador local para refletir renomeações/edições.
- const {data:bySource,error:sourceError}=await client.from('shared_songs').select('id').eq('owner_id',user.id).eq('source_local_id',String(song.id)).maybeSingle();
+ // IDs locais podem se repetir entre telefone, tablet e notebook.
+ // Só atualiza por source_local_id quando título e artista também conferem.
+ const {data:bySource,error:sourceError}=await client.from('shared_songs').select('id,title,artist').eq('owner_id',user.id).eq('source_local_id',String(song.id)).maybeSingle();
  if(sourceError){status('Não foi possível localizar a música pelo aparelho: '+sourceError.message,true);return false;}
- if(bySource){
+ if(bySource&&songKey(bySource)===songKey(song)){
   const result=await client.from('shared_songs').update(row).eq('id',bySource.id);
   if(result.error){status('A música ficou salva neste aparelho, mas não foi atualizada na nuvem: '+result.error.message,true);return false;}
   return true;
  }
- // O índice único por título/artista impede duplicação quando dois aparelhos sincronizam juntos.
- const result=await client.from('shared_songs').upsert(row,{onConflict:'owner_id,title_key,artist_key',ignoreDuplicates:false});
+ // Se o mesmo ID local pertence a outra música, preserva esse registro
+ // e sincroniza esta música pela identidade título + artista.
+ if(bySource)delete row.source_local_id;
+ let result=await client.from('shared_songs').upsert(row,{onConflict:'owner_id,title_key,artist_key',ignoreDuplicates:false});
+ // Se outro aparelho já reservou esse ID local durante a sincronização,
+ // tenta novamente sem o identificador local; a chave título/artista é a identidade compartilhada.
+ if(result.error&&(/shared_songs_owner_source_unique|duplicate key/i.test(result.error.message))){
+  const identityRow={...row};
+  delete identityRow.source_local_id;
+  result=await client.from('shared_songs').upsert(identityRow,{onConflict:'owner_id,title_key,artist_key',ignoreDuplicates:false});
+ }
  if(result.error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+result.error.message,true);return false;}
  return true;
 }
