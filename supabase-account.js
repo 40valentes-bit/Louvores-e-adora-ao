@@ -114,12 +114,16 @@ async function publishSong(song){
  if(!client||!user||!approved||!song||!song.title)return false;
  if(!hasUsableChords(song))return true;
  const row=toCloudSong(song);
- const {data:existing,error:findError}=await client.from('shared_songs').select('id,title,artist').eq('owner_id',user.id);
- if(findError){status('Não foi possível localizar a música na nuvem: '+findError.message,true);return false;}
- const match=(existing||[]).find(item=>songKey(item)===songKey(song));
- const result=match
-  ? await client.from('shared_songs').update(row).eq('id',match.id)
-  : await client.from('shared_songs').insert(row);
+ // Primeiro atualiza pelo identificador local para refletir renomeações/edições.
+ const {data:bySource,error:sourceError}=await client.from('shared_songs').select('id').eq('owner_id',user.id).eq('source_local_id',String(song.id)).maybeSingle();
+ if(sourceError){status('Não foi possível localizar a música pelo aparelho: '+sourceError.message,true);return false;}
+ if(bySource){
+  const result=await client.from('shared_songs').update(row).eq('id',bySource.id);
+  if(result.error){status('A música ficou salva neste aparelho, mas não foi atualizada na nuvem: '+result.error.message,true);return false;}
+  return true;
+ }
+ // O índice único por título/artista impede duplicação quando dois aparelhos sincronizam juntos.
+ const result=await client.from('shared_songs').upsert(row,{onConflict:'owner_id,title_key,artist_key',ignoreDuplicates:false});
  if(result.error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+result.error.message,true);return false;}
  return true;
 }
