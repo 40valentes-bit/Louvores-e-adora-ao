@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const SUPABASE_URL='https://cwnybkcrlljebabxscvc.supabase.co';
-const SUPABASE_KEY='sb_publishable_bn_5QG9VFRoZKx49R0_zWA_R2Tbbi';
+const SUPABASE_KEY='sb_publishable_bn_5QG9VFRoZKx49R0_zWA_R2TbPPbi';
 const ADMIN_EMAIL='binhabh10@gmail.com';
 let client=null,user=null,approved=false,syncBusy=false,cloudStateMerged=false;
 const byId=id=>document.getElementById(id);
