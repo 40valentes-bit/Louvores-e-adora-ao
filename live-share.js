@@ -159,9 +159,12 @@ function startHeartbeat(){
 }
 async function endSession(){
  if(role!=='leader'||!session)return;
- try{await client().from('live_sessions').update({status:'ended',is_scrolling:false,updated_at:new Date().toISOString()}).eq('id',session.id);if(channel)await channel.send({type:'broadcast',event:'revoke',payload:{device_id:'*'}});}
- catch(e){say('A sessão não foi encerrada corretamente: '+(e.message||e),true);return;}
- await leaveLocal('Compartilhamento encerrado.'); 
+ try{
+  if(channel)await channel.send({type:'broadcast',event:'revoke',payload:{device_id:'*'}});
+  const {error}=await client().from('live_sessions').update({status:'ended',is_scrolling:false,updated_at:new Date().toISOString()}).eq('id',session.id);
+  if(error)throw error;
+ }catch(e){say('A sessão não foi encerrada corretamente: '+(e.message||e),true);return;}
+ await leaveLocal('Compartilhamento encerrado.');
 }
 async function leaveLocal(message){
  if(heartbeat)clearInterval(heartbeat);heartbeat=null;if(stateTimer)clearTimeout(stateTimer);stateTimer=null;
