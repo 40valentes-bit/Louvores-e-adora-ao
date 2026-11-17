@@ -195,10 +195,26 @@ async function syncAll(){
    local.push({id:nextId++,title:row.title,artist:row.artist||'',category:row.category||'Congregacionais',key:row.musical_key||'C',capo:row.capo||'',chords:row.chords||'',chordColor:row.chord_color||'#1d4f91',lyricColor:row.lyric_color||'#172235',fontFamily:row.font_family||'Courier New',bold:!!row.bold,shared:true});
    seen.add(key);added++;
   });
-  const orderKeys=Array.isArray(cloudSettings.song_order_keys)?cloudSettings.song_order_keys:null;
-  let reordered=false,orderMatched=0;
+  let orderKeys=Array.isArray(cloudSettings.song_order_keys)?cloudSettings.song_order_keys.slice():null;
+  let reordered=false,orderMatched=0,appendedToOfficial=0;
   if(orderKeys&&orderKeys.length){
    const normalizeOrderKey=value=>String(value||'').normalize('NFC').replace(/[\\u200B-\\u200D\\uFEFF\\u2060\\u00AD]/g,'').replace(/\\s+/g,' ').trim().toLocaleLowerCase('pt-BR');
+   const knownOrderKeys=new Set(orderKeys.map(normalizeOrderKey));
+   // Toda música local válida que já foi publicada/recebida precisa entrar na ordem oficial.
+   // Isso evita o ciclo 35/36 quando um novo louvor é enviado à nuvem antes da ordem ser atualizada.
+   local.forEach(song=>{
+    if(!song.title||!hasUsableChords(song))return;
+    const key=songKey(song),normalized=normalizeOrderKey(key);
+    if(!knownOrderKeys.has(normalized)){
+     orderKeys.push(key);
+     knownOrderKeys.add(normalized);
+     appendedToOfficial++;
+    }
+   });
+   if(appendedToOfficial){
+    cloudSettings.song_order_keys=orderKeys;
+    await writeCloudSettings(cloudSettings);
+   }
    const rank=new Map(orderKeys.map((key,index)=>[normalizeOrderKey(key),index]));
    orderMatched=local.filter(song=>rank.has(normalizeOrderKey(songKey(song)))).length;
    const before=local.map(songKey).join('\\n');
@@ -216,7 +232,7 @@ async function syncAll(){
   if(!await window.LouvoresApp.setFavorites(ids))throw new Error('Os favoritos não puderam ser salvos neste aparelho.');
   cloudStateMerged=true;
   await saveSettings();
-  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); '+removedLocal+' registro(s) sem cifra ou duplicado(s) removido(s) deste aparelho. Ordem oficial: '+(orderKeys&&orderKeys.length?orderMatched+'/'+local.length+' músicas reconhecidas; '+(reordered?'lista reordenada e salva':'lista já estava nessa ordem'):'não encontrada na nuvem')+'. Cifras válidas preservadas.');
+  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); '+removedLocal+' registro(s) sem cifra ou duplicado(s) removido(s) deste aparelho. Ordem oficial: '+(orderKeys&&orderKeys.length?orderMatched+'/'+local.length+' músicas reconhecidas; '+(appendedToOfficial?appendedToOfficial+' música(s) incorporada(s) automaticamente à ordem oficial. ': '')+(reordered?'lista reordenada e salva':'lista já estava nessa ordem'):'não encontrada na nuvem')+'. Cifras válidas preservadas.');
  }catch(e){status('A sincronização não foi concluída: '+(e.message||e),true);}
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
 }
