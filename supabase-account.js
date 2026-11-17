@@ -173,13 +173,15 @@ async function syncAll(){
    seen.add(key);added++;
   });
   const orderKeys=Array.isArray(cloudSettings.song_order_keys)?cloudSettings.song_order_keys:null;
-  let reordered=false;
+  let reordered=false,orderMatched=0;
   if(orderKeys&&orderKeys.length){
-   const rank=new Map(orderKeys.map((key,index)=>[key,index]));
+   const normalizeOrderKey=value=>String(value||'').normalize('NFC').replace(/[\\u200B-\\u200D\\uFEFF\\u2060\\u00AD]/g,'').replace(/\\s+/g,' ').trim().toLocaleLowerCase('pt-BR');
+   const rank=new Map(orderKeys.map((key,index)=>[normalizeOrderKey(key),index]));
+   orderMatched=local.filter(song=>rank.has(normalizeOrderKey(songKey(song)))).length;
    const before=local.map(songKey).join('\\n');
    local.sort((a,b)=>{
-    const ar=rank.has(songKey(a))?rank.get(songKey(a)):Number.MAX_SAFE_INTEGER;
-    const br=rank.has(songKey(b))?rank.get(songKey(b)):Number.MAX_SAFE_INTEGER;
+    const ar=rank.has(normalizeOrderKey(songKey(a)))?rank.get(normalizeOrderKey(songKey(a))):Number.MAX_SAFE_INTEGER;
+    const br=rank.has(normalizeOrderKey(songKey(b)))?rank.get(normalizeOrderKey(songKey(b))):Number.MAX_SAFE_INTEGER;
     return ar-br;
    });
    reordered=before!==local.map(songKey).join('\\n');
@@ -195,7 +197,7 @@ async function syncAll(){
   if(!await window.LouvoresApp.setFavorites(ids))throw new Error('Os favoritos não puderam ser salvos neste aparelho.');
   cloudStateMerged=true;
   await saveSettings();
-  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); ordem compartilhada aplicada quando disponível; nenhuma música local foi substituída.');
+  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s). Ordem oficial: '+(orderKeys&&orderKeys.length?orderMatched+'/'+local.length+' músicas reconhecidas; '+(reordered?'lista reordenada e salva':'lista já estava nessa ordem'):'não encontrada na nuvem')+'. Nenhuma música local foi substituída.');
  }catch(e){status('A sincronização não foi concluída: '+(e.message||e),true);}
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
 }
