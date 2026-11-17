@@ -38,13 +38,14 @@ function mount(){
  actions.append(login,signup,logout,close);
  const tools=node('div',{id:'cloudSyncActions',style:'display:none;margin-top:14px;border-top:1px solid #ddd;padding-top:12px'});
  const sync=node('button',{id:'cloudSync',type:'button'},'Sincronizar músicas e favoritos');
- const syncInfo=node('p',{},'A sincronização acrescenta músicas compartilhadas sem substituir as músicas locais. Músicas que você cadastrar daqui em diante serão publicadas automaticamente quando sua conta estiver aprovada.');
- tools.append(sync,syncInfo);
+ const setOrder=node('button',{id:'cloudSetOrder',type:'button',class:'soft',style:'margin-top:8px'},'Definir ordem deste aparelho como oficial');
+ const syncInfo=node('p',{},'A sincronização acrescenta músicas compartilhadas sem substituir as músicas locais. Para definir a ordem principal, faça isso uma única vez no notebook; depois sincronize os outros aparelhos.');
+ tools.append(sync,setOrder,syncInfo);
  const admin=node('div',{id:'cloudAdmin',style:'margin-top:14px'});
  panel.append(heading,msg,emailLabel,passLabel,actions,tools,admin);modal.appendChild(panel);document.body.appendChild(modal);
  open.onclick=()=>{modal.style.display='flex';refresh();};
  close.onclick=()=>modal.style.display='none';
- login.onclick=doLogin;signup.onclick=doSignup;logout.onclick=doLogout;sync.onclick=syncAll;
+ login.onclick=doLogin;signup.onclick=doSignup;logout.onclick=doLogout;sync.onclick=syncAll;byId('cloudSetOrder').onclick=setCanonicalOrder;
 }
 async function refresh(){
  if(!client){status('Conectando ao serviço de contas…');return;}
@@ -115,15 +116,42 @@ async function publishSong(song){
  if(error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+error.message,true);return false;}
  return true;
 }
+async function readCloudSettings(){
+ const {data,error}=await client.from('user_settings').select('settings').eq('user_id',user.id).maybeSingle();
+ if(error)throw error;
+ return data&&data.settings&&typeof data.settings==='object'?data.settings:{};
+}
+async function writeCloudSettings(settings){
+ const {error}=await client.from('user_settings').upsert({user_id:user.id,settings,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+ if(error)throw error;
+}
 async function saveSettings(){
  if(!client||!user||!approved||!cloudStateMerged)return;
  const favorites=(window.LouvoresApp&&window.LouvoresApp.getFavorites?window.LouvoresApp.getFavorites():[]);
+ const songs=window.LouvoresApp.getSongs();
  const favKeys=favorites.map(id=>{
-  const song=window.LouvoresApp.getSongs().find(s=>String(s.id)===String(id));
+  const song=songs.find(s=>String(s.id)===String(id));
   return song?songKey(song):null;
  }).filter(Boolean);
- const {error}=await client.from('user_settings').upsert({user_id:user.id,settings:{favorite_song_keys:favKeys},updated_at:new Date().toISOString()},{onConflict:'user_id'});
- if(error)throw error;
+ const settings=await readCloudSettings();
+ settings.favorite_song_keys=favKeys;
+ await writeCloudSettings(settings);
+}
+async function setCanonicalOrder(){
+ const button=byId('cloudSetOrder');
+ if(!approved||!user)return;
+ button.disabled=true;status('Registrando a ordem deste notebook na nuvem…');
+ try{
+  const songs=window.LouvoresApp.getSongs();
+  const keys=songs.map(songKey);
+  if(keys.some(key=>key==='|'))throw new Error('Há uma música sem título. Corrija antes de definir a ordem.');
+  if(new Set(keys).size!==keys.length)throw new Error('Existem músicas com o mesmo título e artista. Não alterei a ordem na nuvem para evitar misturar registros.');
+  const settings=await readCloudSettings();
+  settings.song_order_keys=keys;
+  await writeCloudSettings(settings);
+  status('Ordem oficial registrada com '+keys.length+' músicas. Agora sincronize o telefone e o tablet.');
+ }catch(e){status('Não foi possível registrar a ordem: '+(e.message||e),true);}
+ finally{button.disabled=false;}
 }
 async function syncAll(){
  if(syncBusy||!approved)return;
@@ -135,6 +163,7 @@ async function syncAll(){
   }
   const {data:remote,error}=await client.from('shared_songs').select('id,owner_id,title,artist,category,musical_key,capo,chords,chord_color,lyric_color,font_family,bold,source_local_id,created_at').order('created_at');
   if(error)throw error;
+  const cloudSettings=await readCloudSettings();
   const seen=new Set(local.map(songKey));
   let nextId=local.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1,added=0;
   (remote||[]).forEach(row=>{
@@ -143,10 +172,20 @@ async function syncAll(){
    local.push({id:nextId++,title:row.title,artist:row.artist||'',category:row.category||'Congregacionais',key:row.musical_key||'C',capo:row.capo||'',chords:row.chords||'',chordColor:row.chord_color||'#1d4f91',lyricColor:row.lyric_color||'#172235',fontFamily:row.font_family||'Courier New',bold:!!row.bold,shared:true});
    seen.add(key);added++;
   });
-  if(added&&!await window.LouvoresApp.persist())throw new Error('As músicas recebidas não puderam ser salvas neste aparelho.');
-  const {data:settings,error:settingsError}=await client.from('user_settings').select('settings').eq('user_id',user.id).maybeSingle();
-  if(settingsError)throw settingsError;
-  const keys=settings&&settings.settings&&Array.isArray(settings.settings.favorite_song_keys)?settings.settings.favorite_song_keys:[];
+  const orderKeys=Array.isArray(cloudSettings.song_order_keys)?cloudSettings.song_order_keys:null;
+  let reordered=false;
+  if(orderKeys&&orderKeys.length){
+   const rank=new Map(orderKeys.map((key,index)=>[key,index]));
+   const before=local.map(songKey).join('\\n');
+   local.sort((a,b)=>{
+    const ar=rank.has(songKey(a))?rank.get(songKey(a)):Number.MAX_SAFE_INTEGER;
+    const br=rank.has(songKey(b))?rank.get(songKey(b)):Number.MAX_SAFE_INTEGER;
+    return ar-br;
+   });
+   reordered=before!==local.map(songKey).join('\\n');
+  }
+  if((added||reordered)&&!await window.LouvoresApp.persist())throw new Error('As músicas recebidas ou a nova ordem não puderam ser salvas neste aparelho.');
+  const keys=Array.isArray(cloudSettings.favorite_song_keys)?cloudSettings.favorite_song_keys:[];
   const localFavoriteKeys=window.LouvoresApp.getFavorites().map(id=>{
    const song=local.find(item=>String(item.id)===String(id));
    return song?songKey(song):null;
@@ -156,7 +195,7 @@ async function syncAll(){
   if(!await window.LouvoresApp.setFavorites(ids))throw new Error('Os favoritos não puderam ser salvos neste aparelho.');
   cloudStateMerged=true;
   await saveSettings();
-  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); nenhuma música local foi substituída.');
+  status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); ordem compartilhada aplicada quando disponível; nenhuma música local foi substituída.');
  }catch(e){status('A sincronização não foi concluída: '+(e.message||e),true);}
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
 }
