@@ -114,8 +114,13 @@ async function publishSong(song){
  if(!client||!user||!approved||!song||!song.title)return false;
  if(!hasUsableChords(song))return true;
  const row=toCloudSong(song);
- const {error}=await client.from('shared_songs').upsert(row,{onConflict:'owner_id,source_local_id'});
- if(error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+error.message,true);return false;}
+ const {data:existing,error:findError}=await client.from('shared_songs').select('id,title,artist').eq('owner_id',user.id);
+ if(findError){status('Não foi possível localizar a música na nuvem: '+findError.message,true);return false;}
+ const match=(existing||[]).find(item=>songKey(item)===songKey(song));
+ const result=match
+  ? await client.from('shared_songs').update(row).eq('id',match.id)
+  : await client.from('shared_songs').insert(row);
+ if(result.error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+result.error.message,true);return false;}
  return true;
 }
 async function readCloudSettings(){
@@ -166,7 +171,8 @@ async function syncAll(){
   for(const song of beforeCleanup){
    if(!song.title||!hasUsableChords(song))continue;
    const key=songKey(song),current=bestByKey.get(key);
-   if(!current||String(song.chords||'').length>String(current.chords||'').length)bestByKey.set(key,song);
+   const score=item=>[item.key,item.capo,item.chordColor,item.lyricColor,item.fontFamily,item.bold].filter(Boolean).length;
+   if(!current||String(song.chords||'').length>String(current.chords||'').length||(String(song.chords||'').length===String(current.chords||'').length&&score(song)>score(current)))bestByKey.set(key,song);
   }
   local.splice(0,local.length,...bestByKey.values());
   const removedLocal=beforeCleanup.length-local.length;
@@ -179,9 +185,15 @@ async function syncAll(){
   const cloudSettings=await readCloudSettings();
   const seen=new Set(local.map(songKey));
   let nextId=local.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1,added=0;
-  (remote||[]).filter(hasUsableChords).forEach(row=>{
+  const bestRemote=new Map();
+  (remote||[]).filter(row=>row.title&&hasUsableChords(row)).forEach(row=>{
+   const key=songKey(row),current=bestRemote.get(key);
+   const score=item=>[item.musical_key,item.capo,item.chord_color,item.lyric_color,item.font_family,item.bold].filter(Boolean).length;
+   if(!current||String(row.chords||'').length>String(current.chords||'').length||(String(row.chords||'').length===String(current.chords||'').length&&score(row)>score(current)))bestRemote.set(key,row);
+  });
+  bestRemote.forEach(row=>{
    const key=songKey(row);
-   if(!row.title||seen.has(key))return;
+   if(seen.has(key))return;
    local.push({id:nextId++,title:row.title,artist:row.artist||'',category:row.category||'Congregacionais',key:row.musical_key||'C',capo:row.capo||'',chords:row.chords||'',chordColor:row.chord_color||'#1d4f91',lyricColor:row.lyric_color||'#172235',fontFamily:row.font_family||'Courier New',bold:!!row.bold,shared:true});
    seen.add(key);added++;
   });
