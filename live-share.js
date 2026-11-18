@@ -219,16 +219,20 @@ document.addEventListener('pointerdown',event=>{
  button.style.transition='none';
  try{button.setPointerCapture(event.pointerId);}catch(_){}
 },true);
+function swipeDirection(button){return button.classList.contains('back-button')?-1:1;}
 document.addEventListener('pointermove',event=>{
  if(!swipeStart||event.pointerId!==swipeStart.id)return;
- const dx=Math.max(0,event.clientX-swipeStart.x);
- swipeStart.button.style.transform='translateX('+Math.min(dx,180)+'px)';
+ const dir=swipeDirection(swipeStart.button);
+ const dx=(event.clientX-swipeStart.x)*dir;
+ const distance=Math.max(0,dx);
+ swipeStart.button.style.transform='translateX('+(dir*Math.min(distance,180))+'px)';
 },true);
 let suppressSwipeClick=false;
 async function finishSwipe(event,cancelled){
  if(!swipeStart||event.pointerId!==swipeStart.id)return;
  const item=swipeStart;swipeStart=null;
- const dx=event.clientX-item.x;
+ const dir=swipeDirection(item.button);
+ const dx=(event.clientX-item.x)*dir;
  item.button.style.transition='transform .18s ease';
  item.button.style.transform='';
  if(!cancelled&&dx>Math.max(70,item.button.getBoundingClientRect().width*.32)){suppressSwipeClick=true;await leavePairing();}
