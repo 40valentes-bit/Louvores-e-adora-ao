@@ -132,8 +132,9 @@ function waitingScreen(show){
 }
 function applyState(payload){
  if(!payload)return;
- // Nos participantes, a tela de espera substitui a lista quando o principal volta.
- if(role==='participant')waitingScreen(!payload.song_key);
+ // Participantes só abrem a música quando o principal inicia a apresentação.
+ // Antes disso, permanecem na tela circular de espera.
+ if(role==='participant')waitingScreen(!payload.song_key||payload.presentation_active!==true);
  // A aplicação do estado é síncrona. Não manter bloqueio artificial de 100 ms:
  // isso descartava comandos PAUSAR/ROLAR que chegavam durante atualizações da rolagem.
  applying=true;
