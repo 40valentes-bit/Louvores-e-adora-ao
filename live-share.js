@@ -120,10 +120,11 @@ async function connectChannel(){
 function waitingScreen(show){
  let screen=$('liveWaitingScreen');
  if(!screen){
-  screen=el('div',{id:'liveWaitingScreen',style:'display:none;position:fixed;inset:0;z-index:200000;background:#102b52;color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:34px;padding:28px;text-align:center'});
-  const brand=el('div',{style:'font-size:clamp(25px,6vw,38px);font-weight:800;letter-spacing:1.5px;line-height:1.2'},'LOUVORES E ADORAÇÃO');
-  const message=el('div',{style:'font-size:clamp(19px,4.5vw,25px);font-weight:600;line-height:1.35'},'Aguardando a próxima música...');
-  screen.append(brand,message);document.body.appendChild(screen);
+  screen=el('div',{id:'liveWaitingScreen',style:'display:none;position:fixed;inset:0;z-index:200000;background:#102b52;color:#fff;align-items:center;justify-content:center;padding:20px;text-align:center'});
+  const circle=el('div',{style:'width:min(82vw,340px);aspect-ratio:1;border-radius:50%;background:linear-gradient(145deg,#1d5795,#102b52);border:4px solid #e4b84f;box-shadow:0 12px 34px #0005;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:34px'});
+  const brand=el('div',{style:'font-size:clamp(22px,5.5vw,30px);font-weight:800;letter-spacing:1px;line-height:1.2'},'LOUVOR E ADORAÇÃO');
+  const message=el('div',{style:'font-size:clamp(17px,4.3vw,22px);font-weight:600;line-height:1.3'},'Aguardando a próxima música...');
+  circle.append(brand,message);screen.appendChild(circle);document.body.appendChild(screen);
  }
  screen.style.display=show?'flex':'none';
 }
