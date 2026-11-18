@@ -3548,12 +3548,6 @@ function openSong(id){
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
   <button type="button" class="reading-toggle-control" id="readingToggleControl" onclick="toggleAutoScroll()" aria-label="Iniciar rolagem" title="Iniciar rolagem">INICIAR</button>
-  <div class="scroll-speed-controls footer-speed-controls" aria-label="Velocidade da rolagem">
-   <strong class="speed-caption">Velocidade</strong>
-   <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-   <span class="speed-value" aria-live="polite">0.2×</span>
-   <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
-  </div>
   <button type="button" class="back-button" onclick="backToList()">← VOLTAR</button>
  </div>
  <div class="format-tools" aria-label="Formatação da cifra">
