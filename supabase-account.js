@@ -237,6 +237,8 @@ async function syncAll(){
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
 }
 window.LouvoresCloud={
+ getClient:()=>client,
+ getUser:()=>user,
  publishSong,
  saveSettings,
  isApproved:()=>approved,

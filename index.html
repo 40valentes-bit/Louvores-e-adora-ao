@@ -3796,6 +3796,24 @@ async function cleanEmptySongs(){
 $('cleanEmptyBtn').addEventListener('click',cleanEmptySongs);
 $('backupBtn').addEventListener('click',makeBackup);$('restoreFile').addEventListener('change',e=>{if(e.target.files&&e.target.files[0])restoreBackup(e.target.files[0]);e.target.value=''});
 window.LouvoresApp={
+ getLiveState:()=>{
+  const song=songs.find(x=>String(x.id)===String(current));
+  const area=$('songReading');
+  return {song_key:song?(String(song.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(song.artist||'').trim().toLocaleLowerCase('pt-BR')):null,song_title:song?song.title:null,scroll_top:area?area.scrollTop:0,scroll_speed:scrollSpeed,is_scrolling:!!scrollTimer};
+ },
+ applyLiveState:state=>{
+  if(!state||typeof state!=='object')return false;
+  if(state.song_key){
+   const target=songs.find(x=>(String(x.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(x.artist||'').trim().toLocaleLowerCase('pt-BR'))===state.song_key);
+   if(target&&String(target.id)!==String(current))openSong(target.id);
+  }
+  const area=$('songReading');
+  if(area&&Number.isFinite(Number(state.scroll_top)))area.scrollTop=Math.max(0,Number(state.scroll_top));
+  if(Number.isFinite(Number(state.scroll_speed)))setScrollSpeed(Number(state.scroll_speed));
+  if(state.is_scrolling){if(!scrollTimer)startAutoScroll();}
+  else if(scrollTimer)stopAutoScroll();
+  return true;
+ },
  getSongs:()=>songs,
  getFavorites:()=>favorites.slice(),
  persist,
@@ -3816,5 +3834,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./supabase-account.js"></script>
+<script src="./live-share.js"></script>
 
 </body></html>
