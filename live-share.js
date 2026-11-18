@@ -1,5 +1,5 @@
 /* Compartilhamento ao Vivo — Louvores em Cifras
- * Líder único, até cinco aparelhos no total, código temporário e canal privado.
+ * Líder único, até dez aparelhos no total, código temporário e canal privado.
  */
 (function(){
 'use strict';
@@ -8,7 +8,7 @@ const DEVICE_KEY='louvores_live_device_v1';
 const deviceId=(()=>{let v=localStorage.getItem(DEVICE_KEY);if(!v){v=crypto.randomUUID();localStorage.setItem(DEVICE_KEY,v);}return v;})();
 const deviceName=(()=>{const ua=navigator.userAgent||'';const platform=/Android/i.test(ua)?'Android':/iPhone|iPad/i.test(ua)?'iPhone/iPad':/Windows/i.test(ua)?'Notebook Windows':/Mac/i.test(ua)?'Mac': 'Aparelho';return platform+' • '+(navigator.platform||'web');})();
 let channel=null,session=null,role=null,devices=[],stateTimer=null,heartbeat=null,lastPersist=0,applying=false;
-const MAX_DEVICES=5;
+const MAX_DEVICES=10;
 function cloud(){return window.LouvoresCloud||null;}
 function client(){return cloud()&&cloud().getClient?cloud().getClient():null;}
 function user(){return cloud()&&cloud().getUser?cloud().getUser():null;}
@@ -62,7 +62,7 @@ async function startAsLeader(){
   const {error:deviceError}=await c.from('live_devices').insert({session_id:session.id,device_id:deviceId,device_name:deviceName,role:'leader',authorized:true});
   if(deviceError)throw deviceError;
   $('liveCodeValue').textContent=invite;$('liveCodeBox').style.display='block';
-  await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código com até quatro aparelhos.');
+  await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código com até nove aparelhos.');
   $('liveShareModal').style.display='none';
  }catch(e){
   if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
@@ -86,7 +86,7 @@ async function joinSession(){
   if(!existing){
    const {count,error:countError}=await c.from('live_devices').select('*',{count:'exact',head:true}).eq('session_id',data.id).eq('authorized',true);
    if(countError)throw countError;
-   if((count||0)>=MAX_DEVICES)throw new Error('Esta sessão já atingiu o limite de cinco aparelhos.');
+   if((count||0)>=MAX_DEVICES)throw new Error('Esta sessão já atingiu o limite de dez aparelhos.');
    const {error:deviceError}=await c.from('live_devices').insert({session_id:data.id,device_id:deviceId,device_name:deviceName,role:'participant',authorized:true});
    if(deviceError)throw deviceError;
   }else{
