@@ -213,7 +213,7 @@ async function leaveLocal(message){
 }
 let swipeStart=null;
 function swipeTarget(target){return target&&target.closest('.live-swipe-exit,.back-button,.format-back-button');}
-function swipeDirection(button){return button.classList.contains('back-button')?-1:1;}
+function swipeDirection(button){return button.classList.contains('live-swipe-exit')?1:-1;}
 function beginSwipe(button,id,x){
  swipeStart={button,id,x};button.style.transition='none';
 }
@@ -229,16 +229,53 @@ async function finishSwipe(id,x,cancelled){
  const item=swipeStart;swipeStart=null;
  const dx=(x-item.x)*swipeDirection(item.button);
  item.button.style.transition='transform .18s ease';item.button.style.transform='';
- if(!cancelled&&dx>Math.max(55,item.button.getBoundingClientRect().width*.20)){suppressSwipeClick=true;await leavePairing();}
+ if(!cancelled&&dx>Math.max(45,item.button.getBoundingClientRect().width*.16)){
+  suppressSwipeClick=true;
+  await leavePairing();
+ }
 }
+// Mouse/pen use Pointer Events. Touch uses Touch Events because mobile browsers
+// may emit pointercancel during a horizontal gesture before pointerup.
 document.addEventListener('pointerdown',event=>{
+ if(event.pointerType==='touch')return;
  const button=swipeTarget(event.target);
  if(role!=='participant'||!button)return;
  beginSwipe(button,event.pointerId,event.clientX);
 },true);
-document.addEventListener('pointermove',event=>moveSwipe(event.pointerId,event.clientX,event),{capture:true,passive:false});
-document.addEventListener('pointerup',event=>finishSwipe(event.pointerId,event.clientX,false),true);
-document.addEventListener('pointercancel',event=>finishSwipe(event.pointerId,event.clientX,true),true);
+document.addEventListener('pointermove',event=>{
+ if(event.pointerType==='touch')return;
+ moveSwipe(event.pointerId,event.clientX,event);
+},{capture:true,passive:false});
+document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch')finishSwipe(event.pointerId,event.clientX,false);},true);
+document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch')finishSwipe(event.pointerId,event.clientX,true);},true);
+let touchSwipeId=null;
+document.addEventListener('touchstart',event=>{
+ if(role!=='participant'||swipeStart)return;
+ const touch=event.changedTouches&&event.changedTouches[0],button=swipeTarget(event.target);
+ if(!touch||!button)return;
+ touchSwipeId=touch.identifier;
+ beginSwipe(button,'touch-'+touch.identifier,touch.clientX);
+},{capture:true,passive:true});
+document.addEventListener('touchmove',event=>{
+ if(!swipeStart||touchSwipeId===null)return;
+ const touch=Array.from(event.changedTouches||[]).find(t=>t.identifier===touchSwipeId);
+ if(!touch)return;
+ moveSwipe('touch-'+touch.identifier,touch.clientX,event);
+},{capture:true,passive:false});
+document.addEventListener('touchend',event=>{
+ if(touchSwipeId===null)return;
+ const touch=Array.from(event.changedTouches||[]).find(t=>t.identifier===touchSwipeId);
+ if(!touch)return;
+ const id='touch-'+touch.identifier;touchSwipeId=null;
+ finishSwipe(id,touch.clientX,false);
+},{capture:true,passive:true});
+document.addEventListener('touchcancel',event=>{
+ if(touchSwipeId===null)return;
+ const touch=Array.from(event.changedTouches||[]).find(t=>t.identifier===touchSwipeId);
+ if(!touch)return;
+ const id='touch-'+touch.identifier;touchSwipeId=null;
+ finishSwipe(id,touch.clientX,true);
+},{capture:true,passive:true});
 document.addEventListener('click',event=>{
  if(role==='participant'&&event.target.closest('.scroll-speed-controls button')){localSpeedOverride=true;return;}
  if(suppressSwipeClick&&swipeTarget(event.target)){suppressSwipeClick=false;event.preventDefault();event.stopImmediatePropagation();return;}
