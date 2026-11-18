@@ -3814,14 +3814,18 @@ window.LouvoresApp={
    backToList();
   }
   const area=$('songReading');
+  if(Number.isFinite(Number(state.scroll_speed)))setScrollSpeed(Number(state.scroll_speed));
+  // Durante a rolagem, cada aparelho móvel mantém sua própria animação suave.
+  // Corrige apenas diferenças grandes para não disputar scrollTop a cada pacote.
   if(area&&Number.isFinite(Number(state.scroll_top))){
    const targetTop=Math.max(0,Number(state.scroll_top));
-   if(Math.abs(area.scrollTop-targetTop)>2){
+   const drift=Math.abs(area.scrollTop-targetTop);
+   const correctionLimit=state.is_scrolling?36:2;
+   if(drift>correctionLimit){
     area.scrollTop=targetTop;
-    if(scrollTimer)scrollPositionExact=area.scrollTop;
+    if(scrollTimer)scrollPositionExact=targetTop;
    }
   }
-  if(Number.isFinite(Number(state.scroll_speed)))setScrollSpeed(Number(state.scroll_speed));
   if(state.is_scrolling){if(!scrollTimer)startAutoScroll();}
   else if(scrollTimer)stopAutoScroll();
   updateScrollButtons(!!state.is_scrolling);
