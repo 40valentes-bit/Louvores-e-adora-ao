@@ -59,7 +59,7 @@ async function startAsLeader(){
   const {data,error}=await c.from('live_sessions').insert({owner_id:u.id,leader_device_id:deviceId,invite_code_hash:hash}).select('*').single();
   if(error)throw error;
   session=data;role='leader';
-  const {error:deviceError}=await c.from('live_devices').insert({session_id:session.id,device_id:deviceId,device_name:deviceName,role:'leader',authorized:true});
+  const {error:deviceError}=await c.from('live_devices').insert({session_id:session.id,device_id:deviceId,device_name:deviceName,role:'leader',authorized:true,last_seen_at:new Date().toISOString()});
   if(deviceError)throw deviceError;
   $('liveCodeValue').textContent=invite;$('liveCodeBox').style.display='block';
   await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código com até nove aparelhos.');
@@ -89,13 +89,11 @@ async function joinSession(){
    if((count||0)>=MAX_DEVICES)throw new Error('Esta sessão já atingiu o limite de dez aparelhos.');
    const {error:deviceError}=await c.from('live_devices').insert({session_id:data.id,device_id:deviceId,device_name:deviceName,role:'participant',authorized:true});
    if(deviceError)throw deviceError;
-  }else{
-   const {error:touchError}=await c.from('live_devices').update({last_seen_at:new Date().toISOString()}).eq('session_id',data.id).eq('device_id',deviceId);
-   if(touchError)throw touchError;
   }
-  session=data;role='participant';await connectChannel();startHeartbeat();
-  const {data:latest,error:stateError}=await c.from('live_sessions').select('*').eq('id',session.id).single();
-  if(!stateError&&latest)applyState(latest);
+  session=data;role='participant';waitingScreen(true);await connectChannel();
+  const {error:touchError}=await c.from('live_devices').update({last_seen_at:new Date().toISOString()}).eq('session_id',data.id).eq('device_id',deviceId);
+  if(touchError)throw touchError;
+  startHeartbeat();
   await loadDevices();await refreshPanel();say('Aparelho autorizado e conectado. Agora acompanha o aparelho principal.');
   $('liveShareModal').style.display='none';
  }catch(e){
@@ -160,10 +158,11 @@ async function loadDevices(){
  if(!session||!client())return;
  const {data,error}=await client().from('live_devices').select('device_id,device_name,role,authorized,last_seen_at').eq('session_id',session.id).order('created_at');
  if(error){say('Não foi possível listar os aparelhos: '+error.message,true);return;}
- devices=data||[];const box=$('liveDeviceList');if(!box)return;box.replaceChildren(el('h3',{},'Aparelhos autorizados ('+devices.filter(d=>d.authorized).length+'/'+MAX_DEVICES+')'));
+ devices=data||[];const now=Date.now();const online=d=>d.authorized&&(d.role==='leader'||(d.last_seen_at&&now-Date.parse(d.last_seen_at)<45000));const box=$('liveDeviceList');if(!box)return;box.replaceChildren(el('h3',{},'Aparelhos conectados ('+devices.filter(online).length+'/'+MAX_DEVICES+')'));
  devices.forEach(d=>{
   const line=el('div',{style:'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid #e2e8f0'});
-  const info=el('div',{},(d.device_name||'Aparelho')+(d.device_id===deviceId?' (este aparelho)':'')+' — '+(d.role==='leader'?'Principal':d.authorized?'Conectado':'Revogado'));
+  const status=d.authorized?(online(d)?'Conectado':'Autorizado — aguardando conexão'):'Revogado';
+  const info=el('div',{},(d.device_name||'Aparelho')+(d.device_id===deviceId?' (este aparelho)':'')+' — '+(d.role==='leader'?'Principal':status));
   line.appendChild(info);
   if(role==='leader'&&d.role!=='leader'&&d.authorized){
    const revoke=el('button',{type:'button',class:'soft',style:'font-size:12px;padding:7px 9px'},'Revogar');
