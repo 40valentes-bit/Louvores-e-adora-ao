@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 const DEVICE_KEY='louvores_live_device_v1';
 const deviceId=(()=>{let v=localStorage.getItem(DEVICE_KEY);if(!v){v=crypto.randomUUID();localStorage.setItem(DEVICE_KEY,v);}return v;})();
 const deviceName=(()=>{const ua=navigator.userAgent||'';const platform=/Android/i.test(ua)?'Android':/iPhone|iPad/i.test(ua)?'iPhone/iPad':/Windows/i.test(ua)?'Notebook Windows':/Mac/i.test(ua)?'Mac': 'Aparelho';return platform+' • '+(navigator.platform||'web');})();
-let channel=null,session=null,role=null,devices=[],stateTimer=null,heartbeat=null,lastPersist=0,applying=false;
+let channel=null,session=null,role=null,devices=[],stateTimer=null,heartbeat=null,lastPersist=0,applying=false,localSpeedOverride=false;
 const MAX_DEVICES=10;
 function cloud(){return window.LouvoresCloud||null;}
 function client(){return cloud()&&cloud().getClient?cloud().getClient():null;}
@@ -90,7 +90,7 @@ async function joinSession(){
    const {error:deviceError}=await c.from('live_devices').insert({session_id:data.id,device_id:deviceId,device_name:deviceName,role:'participant',authorized:true});
    if(deviceError)throw deviceError;
   }
-  session=data;role='participant';waitingScreen(true);await connectChannel();
+  session=data;role='participant';localSpeedOverride=false;waitingScreen(true);await connectChannel();
   const {error:touchError}=await c.from('live_devices').update({last_seen_at:new Date().toISOString()}).eq('session_id',data.id).eq('device_id',deviceId);
   if(touchError)throw touchError;
   startHeartbeat();
@@ -137,7 +137,7 @@ function applyState(payload){
  // A aplicação do estado é síncrona. Não manter bloqueio artificial de 100 ms:
  // isso descartava comandos PAUSAR/ROLAR que chegavam durante atualizações da rolagem.
  applying=true;
- try{if(window.LouvoresApp&&window.LouvoresApp.applyLiveState)window.LouvoresApp.applyLiveState(payload);}
+ try{if(window.LouvoresApp&&window.LouvoresApp.applyLiveState){const incoming=localSpeedOverride?{...payload,scroll_speed:undefined}:payload;window.LouvoresApp.applyLiveState(incoming);}}
  finally{applying=false;}
 }
 async function publishState(force){
@@ -203,43 +203,44 @@ async function leavePairing(){
   const {error}=await c.from('live_devices').delete().eq('session_id',activeSession.id).eq('device_id',deviceId);
   if(error){say('Não foi possível sair do pareamento: '+error.message,true);return;}
  }
+ if(window.LouvoresApp&&window.LouvoresApp.leaveLiveParticipant)window.LouvoresApp.leaveLiveParticipant();
  await leaveLocal('Você saiu do pareamento. Para voltar, informe novamente o código do aparelho principal.');
 }
 async function leaveLocal(message){
- if(heartbeat)clearInterval(heartbeat);heartbeat=null;if(stateTimer)clearTimeout(stateTimer);stateTimer=null;
+ if(heartbeat)clearInterval(heartbeat);heartbeat=null;if(stateTimer)clearTimeout(stateTimer);stateTimer=null;localSpeedOverride=false;
  if(channel){const c=client();if(c)await c.removeChannel(channel);}channel=null;session=null;role=null;document.body.classList.remove('live-follower');waitingScreen(false);
  $('liveCodeBox').style.display='none';$('liveDeviceList').replaceChildren();await refreshPanel();say(message||'Conexão encerrada.');
 }
 let swipeStart=null;
 function swipeTarget(target){return target&&target.closest('.live-swipe-exit,.back-button,.format-back-button');}
+function swipeDirection(button){return button.classList.contains('back-button')?-1:1;}
+function beginSwipe(button,id,x){
+ swipeStart={button,id,x};button.style.transition='none';
+}
+function moveSwipe(id,x,event){
+ if(!swipeStart||swipeStart.id!==id)return;
+ if(event&&event.cancelable)event.preventDefault();
+ const dir=swipeDirection(swipeStart.button),distance=Math.max(0,(x-swipeStart.x)*dir);
+ swipeStart.button.style.transform='translateX('+(dir*Math.min(distance,220))+'px)';
+}
+let suppressSwipeClick=false;
+async function finishSwipe(id,x,cancelled){
+ if(!swipeStart||swipeStart.id!==id)return;
+ const item=swipeStart;swipeStart=null;
+ const dx=(x-item.x)*swipeDirection(item.button);
+ item.button.style.transition='transform .18s ease';item.button.style.transform='';
+ if(!cancelled&&dx>Math.max(55,item.button.getBoundingClientRect().width*.20)){suppressSwipeClick=true;await leavePairing();}
+}
 document.addEventListener('pointerdown',event=>{
  const button=swipeTarget(event.target);
  if(role!=='participant'||!button)return;
- swipeStart={button,id:event.pointerId,x:event.clientX};
- button.style.transition='none';
- try{button.setPointerCapture(event.pointerId);}catch(_){}
+ beginSwipe(button,event.pointerId,event.clientX);
 },true);
-function swipeDirection(button){return button.classList.contains('back-button')?-1:1;}
-document.addEventListener('pointermove',event=>{
- if(!swipeStart||event.pointerId!==swipeStart.id)return;
- const dir=swipeDirection(swipeStart.button);
- const dx=(event.clientX-swipeStart.x)*dir;
- const distance=Math.max(0,dx);
- swipeStart.button.style.transform='translateX('+(dir*Math.min(distance,180))+'px)';
-},true);
-let suppressSwipeClick=false;
-async function finishSwipe(event,cancelled){
- if(!swipeStart||event.pointerId!==swipeStart.id)return;
- const item=swipeStart;swipeStart=null;
- const dir=swipeDirection(item.button);
- const dx=(event.clientX-item.x)*dir;
- item.button.style.transition='transform .18s ease';
- item.button.style.transform='';
- if(!cancelled&&dx>Math.max(70,item.button.getBoundingClientRect().width*.32)){suppressSwipeClick=true;await leavePairing();}
-}
-document.addEventListener('pointerup',event=>finishSwipe(event,false),true);
-document.addEventListener('pointercancel',event=>finishSwipe(event,true),true);
+document.addEventListener('pointermove',event=>moveSwipe(event.pointerId,event.clientX,event),{capture:true,passive:false});
+document.addEventListener('pointerup',event=>finishSwipe(event.pointerId,event.clientX,false),true);
+document.addEventListener('pointercancel',event=>finishSwipe(event.pointerId,event.clientX,true),true);
 document.addEventListener('click',event=>{
+ if(role==='participant'&&event.target.closest('.scroll-speed-controls button')){localSpeedOverride=true;return;}
  if(suppressSwipeClick&&swipeTarget(event.target)){suppressSwipeClick=false;event.preventDefault();event.stopImmediatePropagation();return;}
  if(role==='participant'&&swipeTarget(event.target)){event.preventDefault();event.stopImmediatePropagation();return;}
  if(role==='participant'&&(event.target.closest('#layout')||event.target.closest('.song'))){event.preventDefault();event.stopImmediatePropagation();}
@@ -249,6 +250,6 @@ document.addEventListener('click',event=>{
 },true);
 document.addEventListener('scroll',event=>{if(event.target&&event.target.id==='songReading')queuePublish();},true);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&role==='leader')publishState(true);});
-const style=el('style');style.textContent='.live-follower #detail .song-fixed-actions{opacity:1!important;pointer-events:auto!important;position:relative;z-index:1200!important}.live-follower #detail .song-fixed-actions .reading-toggle-control,.live-follower #detail .song-fixed-actions .scroll-speed-controls{pointer-events:none!important}.live-follower #detail .song-fixed-actions .back-button{display:inline-flex!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:1202!important;background:#0878ed!important;color:#fff!important;border-color:#0668d2!important;pointer-events:auto!important;touch-action:pan-y!important;user-select:none;-webkit-user-select:none}.live-follower #detail .format-tools{pointer-events:none!important}.live-follower #detail .format-tools .format-back-button{opacity:1;background:#0878ed!important;color:#fff!important;border-color:#0668d2!important;pointer-events:auto!important;touch-action:pan-y;user-select:none;-webkit-user-select:none}.live-swipe-exit{box-shadow:0 3px 10px #0004}';document.head.appendChild(style);
+const style=el('style');style.textContent='.live-follower #detail .song-fixed-actions{opacity:1!important;pointer-events:auto!important;position:relative;z-index:1200!important}.live-follower #detail .song-fixed-actions .reading-toggle-control{pointer-events:none!important}.live-follower #detail .song-fixed-actions .scroll-speed-controls{pointer-events:auto!important;position:relative!important;z-index:1203!important}.live-follower #detail .song-fixed-actions .scroll-speed-controls button{pointer-events:auto!important;touch-action:manipulation!important}.live-follower #detail .song-fixed-actions .back-button{display:inline-flex!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:1204!important;background:#0878ed!important;color:#fff!important;border-color:#0668d2!important;pointer-events:auto!important;touch-action:none!important;user-select:none;-webkit-user-select:none}.live-follower #detail .format-tools{pointer-events:none!important}.live-follower #detail .format-tools .scroll-speed-controls{pointer-events:auto!important;position:relative!important;z-index:1203!important}.live-follower #detail .format-tools .scroll-speed-controls button{pointer-events:auto!important;touch-action:manipulation!important}.live-follower #detail .format-tools .format-back-button{opacity:1;background:#0878ed!important;color:#fff!important;border-color:#0668d2!important;pointer-events:auto!important;touch-action:none!important;user-select:none;-webkit-user-select:none}.live-swipe-exit{box-shadow:0 3px 10px #0004;touch-action:none!important}';document.head.appendChild(style);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 })();
