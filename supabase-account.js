@@ -3,7 +3,7 @@
 'use strict';
 const SUPABASE_URL='https://cwnybkcrlljbebaxscvc.supabase.co';
 const SUPABASE_KEY='sb_publishable_bn_5QG9VFRoZKx49R0_zWA_R2TbPPbi';
-const ADMIN_EMAIL='binhabh10@gmail.com';
+const ADMIN_EMAIL='123plicativo@gmail.com';
 let client=null,user=null,approved=false,syncBusy=false,cloudStateMerged=false;
 const byId=id=>document.getElementById(id);
 function node(tag,attrs={},textValue=''){
@@ -39,8 +39,10 @@ function mount(){
  const tools=node('div',{id:'cloudSyncActions',style:'display:none;margin-top:14px;border-top:1px solid #ddd;padding-top:12px'});
  const sync=node('button',{id:'cloudSync',type:'button'},'Sincronizar músicas e favoritos');
  const setOrder=node('button',{id:'cloudSetOrder',type:'button',class:'soft',style:'margin-top:8px'},'Definir ordem deste aparelho como oficial');
+ const resetAdmin=node('button',{id:'cloudResetAdminPassword',type:'button',class:'soft',style:'display:none;margin-top:8px'},'Redefinir senha de administrador');
  const syncInfo=node('p',{},'A sincronização acrescenta músicas compartilhadas sem substituir as músicas locais. Para definir a ordem principal, faça isso uma única vez no notebook; depois sincronize os outros aparelhos.');
- tools.append(sync,setOrder,syncInfo);
+ tools.append(sync,setOrder,resetAdmin,syncInfo);
+ resetAdmin.onclick=resetAdminMutationPassword;
  const admin=node('div',{id:'cloudAdmin',style:'margin-top:14px'});
  panel.append(heading,msg,emailLabel,passLabel,actions,tools,admin);modal.appendChild(panel);document.body.appendChild(modal);
  open.onclick=()=>{modal.style.display='flex';refresh();};
@@ -50,6 +52,7 @@ function mount(){
 async function refresh(){
  if(!client){status('Conectando ao serviço de contas…');return;}
  byId('cloudSyncActions').style.display=approved?'block':'none';
+ byId('cloudResetAdminPassword').style.display=approved&&user&&user.id==='4148b351-24b5-4a22-bfa5-d0cc1601fa83'?'block':'none';
  byId('cloudLogout').style.display=user?'inline-block':'none';
  byId('cloudAdmin').replaceChildren();
  if(!user){approved=false;status('Entre ou crie uma conta. A biblioteca local continua protegida.');return;}
@@ -110,18 +113,18 @@ function hasUsableChords(s){const value=String(s&&s.chords||'').trim();return !!
 function toCloudSong(s){
  return {owner_id:user.id,title:s.title,artist:s.artist||'',category:s.category||'',musical_key:s.key||'',capo:s.capo||'',chords:s.chords||'',chord_color:s.chordColor||'',lyric_color:s.lyricColor||'',font_family:s.fontFamily||'',bold:!!s.bold,source_local_id:String(s.id)};
 }
-function mutationPasswordDialog(isSetup){
+function mutationPasswordDialog(isSetup,isReset=false){
  return new Promise(resolve=>{
   const overlay=node('div',{style:'position:fixed;inset:0;z-index:100000;background:#07182dcc;display:flex;align-items:center;justify-content:center;padding:18px'});
   const panel=node('section',{style:'width:min(100%,420px);background:#fff;color:#172235;border-radius:18px;padding:22px;box-shadow:0 15px 50px #0006'});
-  const title=node('h2',{},isSetup?'Cadastrar senha de administrador':'Confirmar alteração');
-  const message=node('p',{},isSetup?'Crie uma senha com pelo menos 12 caracteres. Ela protegerá cada inclusão, edição e exclusão de música.':'Digite sua senha de administrador para autorizar esta alteração.');
+  const title=node('h2',{},isReset?'Redefinir senha de administrador':(isSetup?'Cadastrar senha de administrador':'Confirmar alteração'));
+  const message=node('p',{},isSetup?'Crie uma nova senha com pelo menos 12 caracteres e repita para confirmar. Ela protegerá cada inclusão, edição e exclusão de música.':'Digite sua senha de administrador para autorizar esta alteração.');
   const first=node('input',{type:'password',autocomplete:'new-password',placeholder:isSetup?'Nova senha (mínimo 12 caracteres)':'Senha de administrador',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
   const second=node('input',{type:'password',autocomplete:'new-password',placeholder:'Repita a nova senha',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
   const error=node('p',{style:'color:#b42318;min-height:20px;margin:4px 0'});
   const actions=node('div',{style:'display:flex;gap:10px;justify-content:flex-end;margin-top:12px'});
   const cancel=node('button',{type:'button',class:'soft'},'Cancelar');
-  const confirm=node('button',{type:'button'},isSetup?'Cadastrar senha':'Confirmar');
+  const confirm=node('button',{type:'button'},isReset?'Redefinir senha':(isSetup?'Cadastrar senha':'Confirmar'));
   actions.append(cancel,confirm);panel.append(title,message,first);if(isSetup)panel.append(second);panel.append(error,actions);overlay.append(panel);document.body.append(overlay);
   const finish=value=>{overlay.remove();resolve(value);};
   cancel.onclick=()=>finish(null);
@@ -150,6 +153,20 @@ async function requestMutationPassword(){
   status('Senha de administrador cadastrada com segurança.');
  }
  return password;
+}
+async function resetAdminMutationPassword(){
+ if(!client||!user||user.id!=='4148b351-24b5-4a22-bfa5-d0cc1601fa83'){
+  status('Somente a conta principal pode redefinir esta senha.',true);return;
+ }
+ const password=await mutationPasswordDialog(true,true);
+ if(!password)return;
+ const button=byId('cloudResetAdminPassword');button.disabled=true;
+ try{
+  const {error}=await client.rpc('set_admin_mutation_password',{p_password:password});
+  if(error)throw error;
+  status('Senha de administrador redefinida. Agora sincronize novamente as músicas.');
+ }catch(error){status('Não foi possível redefinir a senha: '+(error.message||error),true);}
+ finally{button.disabled=false;}
 }
 async function rpcSongUpsert(song,password=null,oldSong=null){
  const row=toCloudSong(song);
