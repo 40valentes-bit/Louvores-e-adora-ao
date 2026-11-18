@@ -257,7 +257,7 @@ async function syncAll(){
   const favoriteKeysBefore=window.LouvoresApp.getFavorites().map(id=>beforeCleanup.find(song=>String(song.id)===String(id))).filter(hasUsableChords).map(songKey);
   const bestByKey=new Map();
   for(const song of beforeCleanup){
-   if(!song.title||!hasUsableChords(song))continue;
+   if(!song.title||!hasUsableChords(song)||deletedKeys.has(songKey(song)))continue;
    const key=songKey(song),current=bestByKey.get(key);
    const score=item=>[item.key,item.capo,item.chordColor,item.lyricColor,item.fontFamily,item.bold].filter(Boolean).length;
    if(!current||String(song.chords||'').length>String(current.chords||'').length||(String(song.chords||'').length===String(current.chords||'').length&&score(song)>score(current)))bestByKey.set(key,song);
