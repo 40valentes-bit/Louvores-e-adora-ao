@@ -121,7 +121,7 @@ function waitingScreen(show){
  let screen=$('liveWaitingScreen');
  if(!screen){
   screen=el('div',{id:'liveWaitingScreen',style:'display:none;position:fixed;inset:0;z-index:200000;background:#102b52;color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:34px;padding:28px;text-align:center'});
-  const brand=el('div',{style:'font-size:clamp(25px,6vw,38px);font-weight:800;letter-spacing:1.5px;line-height:1.2'},'LOUVRES E ADORAÇÃO');
+  const brand=el('div',{style:'font-size:clamp(25px,6vw,38px);font-weight:800;letter-spacing:1.5px;line-height:1.2'},'LOUVORES E ADORAÇÃO');
   const message=el('div',{style:'font-size:clamp(19px,4.5vw,25px);font-weight:600;line-height:1.35'},'Aguardando a próxima música...');
   screen.append(brand,message);document.body.appendChild(screen);
  }
