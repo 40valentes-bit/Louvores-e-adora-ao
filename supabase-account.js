@@ -181,13 +181,12 @@ async function readDeletedSongKeys(){
  if(error)throw error;
  return Array.isArray(data)?data:[];
 }
-async function publishSong(song){
+async function publishSong(song,password=null){
  if(!client||!user||!approved||!song||!song.title)return false;
  if(!hasUsableChords(song))return true;
- // A sincronização não pede senha para músicas já autorizadas e idênticas.
- // Qualquer inclusão ou diferença de conteúdo é bloqueada pelo banco sem senha.
- try{await rpcSongUpsert(song,null,null);return true;}
- catch(error){status('A sincronização encontrou uma alteração que precisa de confirmação de senha: '+error.message,true);return false;}
+ // O banco permite leituras/itens idênticos sem senha e exige senha para cada gravação.
+ await rpcSongUpsert(song,password,null);
+ return true;
 }
 async function readCloudSettings(){
  const {data,error}=await client.from('user_settings').select('settings').eq('user_id',user.id).maybeSingle();
@@ -249,8 +248,21 @@ async function syncAll(){
   local.splice(0,local.length,...bestByKey.values());
   const removedLocal=beforeCleanup.length-local.length;
   if(removedLocal&&!await window.LouvoresApp.persist())throw new Error('Não foi possível salvar a limpeza local; nenhuma música da nuvem foi removida.');
+  let syncMutationPassword=null;
   for(const song of local){
-   if(!await publishSong(song))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
+   try{
+    if(!await publishSong(song,syncMutationPassword))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
+   }catch(firstError){
+    // Uma música local nova ou modificada exige a senha de administrador.
+    // Solicita uma vez nesta sincronização e valida a senha no banco em cada gravação.
+    if(syncMutationPassword)throw new Error('Falha ao enviar a música local '+(song.title||'sem título')+': '+(firstError.message||firstError));
+    syncMutationPassword=await requestMutationPassword();
+    try{
+     if(!await publishSong(song,syncMutationPassword))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
+    }catch(retryError){
+     throw new Error('Falha ao enviar a música local '+(song.title||'sem título')+': '+(retryError.message||retryError));
+    }
+   }
   }
   const {data:remote,error}=await client.from('shared_songs').select('id,owner_id,title,artist,category,musical_key,capo,chords,chord_color,lyric_color,font_family,bold,source_local_id,created_at').order('created_at');
   if(error)throw error;
