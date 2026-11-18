@@ -39,6 +39,10 @@ button{font:inherit;border:0;border-radius:12px;padding:12px 15px;font-weight:70
 .layout.song-open .scroll-speed-controls{display:flex;align-items:center;justify-content:center;gap:7px;padding:2px;background:rgba(210,216,224,.30);border:1px solid rgba(130,142,156,.24);border-radius:12px}
 .layout.song-open .scroll-speed-controls button{flex:0 0 32px;min-width:32px;width:32px;min-height:27px;padding:2px;background:rgba(190,199,210,.20);color:#536171;border:1px solid rgba(130,142,156,.16);border-radius:7px;font-size:17px;line-height:1}
 .layout.song-open .scroll-speed-controls span{display:inline-block;min-width:42px;text-align:center;font-size:10px;font-weight:800;color:#536171;font-variant-numeric:tabular-nums}
+.layout.song-open .speed-caption{font-size:10px;font-weight:800;color:#536171;white-space:nowrap}
+.layout.song-open.reading-focus .footer-speed-controls{gap:4px;padding:3px 5px;background:rgba(210,216,224,.28)}
+.layout.song-open.reading-focus .footer-speed-controls button{flex-basis:28px;min-width:28px;width:28px;min-height:30px}
+.layout.song-open.reading-focus .footer-speed-controls span{min-width:38px;font-size:11px}
 .layout.song-open .reading-toggle-control{min-width:55px;min-height:27px;padding:5px 8px;background:rgba(185,196,209,.22);color:#465568;border:1px solid rgba(130,142,156,.20);border-radius:8px;font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap}
 .layout.song-open .back-button{justify-self:end;min-height:27px;padding:5px 8px;background:rgba(185,196,209,.22);color:#536171;border:1px solid rgba(130,142,156,.18);border-radius:8px;font-size:10px;white-space:nowrap}
 .layout.song-open .song-fixed-header button{min-height:38px;padding-top:8px;padding-bottom:8px}
@@ -3530,8 +3534,7 @@ function setScrollSpeed(v){
  const next=Number(v);
  if(!Number.isFinite(next))return;
  scrollSpeed=Math.max(0.2,Math.min(5,next));
- const label=$('speedValue');
- if(label)label.textContent=scrollSpeed.toFixed(1)+'×';
+ document.querySelectorAll('.speed-value').forEach(label=>{label.textContent=scrollSpeed.toFixed(1)+'×';});
 }
 function adjustScrollSpeed(delta){
  setScrollSpeed(Math.round((scrollSpeed+Number(delta))*10)/10);
@@ -3545,6 +3548,12 @@ function openSong(id){
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
   <button type="button" class="reading-toggle-control" id="readingToggleControl" onclick="toggleAutoScroll()" aria-label="Iniciar rolagem" title="Iniciar rolagem">INICIAR</button>
+  <div class="scroll-speed-controls footer-speed-controls" aria-label="Velocidade da rolagem">
+   <strong class="speed-caption">Velocidade</strong>
+   <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
+   <span class="speed-value" aria-live="polite">0.2×</span>
+   <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
+  </div>
   <button type="button" class="back-button" onclick="backToList()">← VOLTAR</button>
  </div>
  <div class="format-tools" aria-label="Formatação da cifra">
@@ -3554,15 +3563,16 @@ function openSong(id){
   <label>Fonte <select id="viewFont" oninput="setViewFont(this.value)" aria-label="Fonte">
    <option value="Courier New">Courier New</option><option value="Consolas">Consolas</option><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option>
   </select></label>
-  <div class="text-size-controls" aria-label="Ajustar texto e velocidade da rolagem">
+  <div class="text-size-controls" aria-label="Ajustar tamanho do texto">
    <span>Texto</span>
    <button type="button" onclick="changeFont(-1)" aria-label="Diminuir tamanho do texto e dos acordes" title="Diminuir texto">−</button>
    <button type="button" onclick="changeFont(1)" aria-label="Aumentar tamanho do texto e dos acordes" title="Aumentar texto">+</button>
-   <div class="scroll-speed-controls" aria-label="Ajustar velocidade da rolagem">
-    <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-    <span id="speedValue" aria-live="polite">0.2×</span>
-    <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
-   </div>
+  </div>
+  <div class="scroll-speed-controls" aria-label="Velocidade da rolagem">
+   <strong class="speed-caption">Velocidade</strong>
+   <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
+   <span class="speed-value" aria-live="polite">0.2×</span>
+   <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
   </div>
   <div class="tone-tools" aria-label="Transposição de tonalidade e capotraste">
    <div class="tone-stepper">
