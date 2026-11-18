@@ -300,30 +300,6 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 }
 
 
-/* Abertura visual: mostra a arte antes da lista de músicas. */
-.app-shell { visibility: hidden; }
-body.app-entered .app-shell { visibility: visible; }
-#appWelcomeScreen {
- position:fixed; inset:0; z-index:999999; display:flex; flex-direction:column;
- align-items:center; justify-content:center; gap:22px; padding:22px 16px;
- background:radial-gradient(circle at 50% 38%,#247ac2 0%,#123b70 58%,#081c38 100%);
- color:#fff; text-align:center; cursor:pointer; user-select:none;
-}
-#appWelcomeScreen img {
- display:block; width:min(100%,820px); max-height:82vh; object-fit:contain;
- filter:drop-shadow(0 12px 28px #00152d66);
-}
-#appWelcomeScreen .welcome-hint {
- margin:0; padding:11px 22px; border:1px solid #e4b84f; border-radius:999px;
- background:#102b52cc; color:#fff; font-weight:700; letter-spacing:.5px;
- box-shadow:0 5px 18px #00152d55;
-}
-@media (max-height:560px) {
- #appWelcomeScreen { gap:10px; padding:10px; }
- #appWelcomeScreen img { max-height:76vh; }
- #appWelcomeScreen .welcome-hint { padding:8px 18px; }
-}
-
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -334,10 +310,6 @@ body.app-entered .app-shell { visibility: visible; }
 
 </head>
 <body>
-<div id="appWelcomeScreen" role="button" tabindex="0" aria-label="Toque para entrar no aplicativo">
- <img id="welcomeLogo" alt="Louvor e Adoração" decoding="async">
- <p class="welcome-hint">TOQUE NA TELA PARA ENTRAR</p>
-</div>
 <div class="app-shell">
   <div class="fixed-area">
     <header><div class="brand">Aplicativo de Musicas</div><h1>Louvores &amp; Adoração</h1></header>
@@ -3913,26 +3885,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./supabase-account.js"></script>
 
-<script>
-(function(){
- const screen=document.getElementById('appWelcomeScreen');
- const enter=()=>{
-  if(document.body.classList.contains('app-entered')) return;
-  document.body.classList.add('app-entered');
-  screen.style.display='none';
- };
- screen.addEventListener('click',enter);
- screen.addEventListener('keydown',event=>{
-  if(event.key==='Enter'||event.key===' '){event.preventDefault();enter();}
- });
- window.LouvoresBrandImagePromise=fetch('./identidade-louvor-adoracao.webp.b64?v=1',{cache:'no-cache'})
-  .then(response=>{if(!response.ok)throw new Error('Imagem de abertura indisponível');return response.text();})
-  .then(encoded=>'data:image/webp;base64,'+encoded.trim());
- window.LouvoresBrandImagePromise.then(src=>{
-  const img=document.getElementById('welcomeLogo');if(img)img.src=src;
- }).catch(error=>console.warn('Não foi possível carregar a identidade visual:',error));
-})();
-</script>
+
 
 <script src="./live-share.js"></script>
 
