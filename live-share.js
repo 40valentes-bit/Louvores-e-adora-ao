@@ -118,9 +118,12 @@ async function connectChannel(){
  document.body.classList.toggle('live-follower',role==='participant');
 }
 function applyState(payload){
- if(!payload||applying)return;applying=true;
+ if(!payload)return;
+ // A aplicação do estado é síncrona. Não manter bloqueio artificial de 100 ms:
+ // isso descartava comandos PAUSAR/ROLAR que chegavam durante atualizações da rolagem.
+ applying=true;
  try{if(window.LouvoresApp&&window.LouvoresApp.applyLiveState)window.LouvoresApp.applyLiveState(payload);}
- finally{setTimeout(()=>{applying=false;},100);}
+ finally{applying=false;}
 }
 async function publishState(force){
  if(role!=='leader'||!channel||!session||applying)return;
