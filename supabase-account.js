@@ -110,16 +110,79 @@ function hasUsableChords(s){const value=String(s&&s.chords||'').trim();return !!
 function toCloudSong(s){
  return {owner_id:user.id,title:s.title,artist:s.artist||'',category:s.category||'',musical_key:s.key||'',capo:s.capo||'',chords:s.chords||'',chord_color:s.chordColor||'',lyric_color:s.lyricColor||'',font_family:s.fontFamily||'',bold:!!s.bold,source_local_id:String(s.id)};
 }
+function mutationPasswordDialog(isSetup){
+ return new Promise(resolve=>{
+  const overlay=node('div',{style:'position:fixed;inset:0;z-index:100000;background:#07182dcc;display:flex;align-items:center;justify-content:center;padding:18px'});
+  const panel=node('section',{style:'width:min(100%,420px);background:#fff;color:#172235;border-radius:18px;padding:22px;box-shadow:0 15px 50px #0006'});
+  const title=node('h2',{},isSetup?'Cadastrar senha de administrador':'Confirmar alteração');
+  const message=node('p',{},isSetup?'Crie uma senha com pelo menos 12 caracteres. Ela protegerá cada inclusão, edição e exclusão de música.':'Digite sua senha de administrador para autorizar esta alteração.');
+  const first=node('input',{type:'password',autocomplete:'new-password',placeholder:isSetup?'Nova senha (mínimo 12 caracteres)':'Senha de administrador',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
+  const second=node('input',{type:'password',autocomplete:'new-password',placeholder:'Repita a nova senha',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
+  const error=node('p',{style:'color:#b42318;min-height:20px;margin:4px 0'});
+  const actions=node('div',{style:'display:flex;gap:10px;justify-content:flex-end;margin-top:12px'});
+  const cancel=node('button',{type:'button',class:'soft'},'Cancelar');
+  const confirm=node('button',{type:'button'},isSetup?'Cadastrar senha':'Confirmar');
+  actions.append(cancel,confirm);panel.append(title,message,first);if(isSetup)panel.append(second);panel.append(error,actions);overlay.append(panel);document.body.append(overlay);
+  const finish=value=>{overlay.remove();resolve(value);};
+  cancel.onclick=()=>finish(null);
+  confirm.onclick=()=>{
+   const value=first.value;
+   if(value.length<12){error.textContent='Use pelo menos 12 caracteres.';first.focus();return;}
+   if(isSetup&&value!==second.value){error.textContent='As senhas não conferem.';second.focus();return;}
+   finish(value);
+  };
+  overlay.addEventListener('click',e=>{if(e.target===overlay)finish(null);});
+  first.addEventListener('keydown',e=>{if(e.key==='Enter'){if(isSetup)second.focus();else confirm.click();}});
+  second.addEventListener('keydown',e=>{if(e.key==='Enter')confirm.click();});
+  first.focus();
+ });
+}
+async function requestMutationPassword(){
+ if(!client||!user||!approved)throw new Error('Entre na conta principal 123plicativo@gmail.com e confirme a aprovação antes de alterar músicas.');
+ if(user.id!=='4148b351-24b5-4a22-bfa5-d0cc1601fa83')throw new Error('Somente a conta principal está autorizada a alterar músicas.');
+ const {data:configured,error:statusError}=await client.rpc('admin_mutation_password_is_set');
+ if(statusError)throw new Error('Não foi possível verificar a proteção de senha: '+statusError.message);
+ const password=await mutationPasswordDialog(!configured);
+ if(!password)throw new Error('Operação cancelada.');
+ if(!configured){
+  const {error}=await client.rpc('set_admin_mutation_password',{p_password:password});
+  if(error)throw new Error('Não foi possível cadastrar a senha: '+error.message);
+  status('Senha de administrador cadastrada com segurança.');
+ }
+ return password;
+}
+async function rpcSongUpsert(song,password=null,oldSong=null){
+ const row=toCloudSong(song);
+ delete row.owner_id;delete row.source_local_id;
+ const {data,error}=await client.rpc('admin_upsert_song',{
+  p_password:password,
+  p_song:row,
+  p_old_title:oldSong?oldSong.title:null,
+  p_old_artist:oldSong?oldSong.artist||'':null
+ });
+ if(error)throw error;
+ return data;
+}
+async function mutateSong(song,oldSong,password){
+ if(!client||!user||!approved)throw new Error('Conta principal sem sessão aprovada.');
+ await rpcSongUpsert(song,password,oldSong);
+ return true;
+}
+async function deleteSongCloud(song,password){
+ if(!client||!user||!approved)throw new Error('Conta principal sem sessão aprovada.');
+ const {error}=await client.rpc('admin_delete_song',{
+  p_password:password,p_title:song.title,p_artist:song.artist||''
+ });
+ if(error)throw error;
+ return true;
+}
 async function publishSong(song){
  if(!client||!user||!approved||!song||!song.title)return false;
  if(!hasUsableChords(song))return true;
- // IDs locais não são identidade global: podem colidir entre notebook, telefone e tablet.
- // A identidade compartilhada é sempre título + artista; nunca atualize uma linha por ID local.
- const row=toCloudSong(song);
- delete row.source_local_id;
- const {error}=await client.from('shared_songs').upsert(row,{onConflict:'owner_id,title_key,artist_key',ignoreDuplicates:false});
- if(error){status('A música ficou salva neste aparelho, mas não foi enviada à nuvem: '+error.message,true);return false;}
- return true;
+ // A sincronização não pede senha para músicas já autorizadas e idênticas.
+ // Qualquer inclusão ou diferença de conteúdo é bloqueada pelo banco sem senha.
+ try{await rpcSongUpsert(song,null,null);return true;}
+ catch(error){status('A sincronização encontrou uma alteração que precisa de confirmação de senha: '+error.message,true);return false;}
 }
 async function readCloudSettings(){
  const {data,error}=await client.from('user_settings').select('settings').eq('user_id',user.id).maybeSingle();
@@ -240,6 +303,9 @@ window.LouvoresCloud={
  getClient:()=>client,
  getUser:()=>user,
  publishSong,
+ requestMutationPassword,
+ mutateSong,
+ deleteSong:deleteSongCloud,
  saveSettings,
  isApproved:()=>approved,
  syncAll
