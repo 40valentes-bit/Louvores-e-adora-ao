@@ -265,6 +265,13 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
  .layout.song-open .capo-control select{min-width:92px;padding:6px}
  .layout.song-open .format-tools .format-back-button{min-width:82px!important;max-width:94px!important;min-height:34px!important;font-size:11px!important}
 }
+
+/* iPhone/Safari: ao abrir um louvor, esconder o cabeçalho da biblioteca e liberar a tela inteira para a cifra. */
+@supports (-webkit-touch-callout: none) {
+ body.song-view-active .fixed-area{display:none!important;}
+ body.song-view-active .content-scroll{position:fixed!important;inset:0!important;z-index:999!important;width:100%!important;height:100vh!important;height:100dvh!important;overflow:hidden!important;padding:0!important;margin:0!important;}
+ body.song-view-active .layout.song-open #detail{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:0!important;}
+}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -3477,9 +3484,9 @@ function adjustScrollSpeed(delta){
  const controls=document.querySelector('.scroll-speed-controls');
  if(controls){controls.setAttribute('aria-label','Velocidade da rolagem: '+scrollSpeed.toFixed(1)+' vezes');}
 }
-function backToList(){stopAutoScroll();$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
+function backToList(){stopAutoScroll();document.body.classList.remove('song-view-active');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
- stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
+ stopAutoScroll();document.body.classList.add('song-view-active');current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
