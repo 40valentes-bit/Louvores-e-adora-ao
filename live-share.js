@@ -123,7 +123,9 @@ function waitingScreen(show){
   screen=el('div',{id:'liveWaitingScreen',style:'display:none;position:fixed;inset:0;z-index:200000;background:#102b52;color:#fff;align-items:center;justify-content:center;padding:20px;text-align:center'});
   const circle=el('div',{style:'width:min(82vw,340px);aspect-ratio:1;border-radius:50%;overflow:hidden;background:#75bdf3;border:4px solid #e4b84f;box-shadow:0 12px 34px #0005;padding:0'});
   const logo=el('img',{alt:'Louvor e Adoração',src:'./identidade-louvor-adoracao.webp',style:'display:block;width:100%;height:100%;object-fit:contain;border-radius:50%'});
-  circle.appendChild(logo);screen.appendChild(circle);document.body.appendChild(screen);
+  circle.appendChild(logo);
+  const exit=el('button',{type:'button',class:'live-swipe-exit',style:'margin-top:28px;width:min(86vw,340px);min-height:54px;border:1px solid #0668d2;border-radius:12px;background:#0878ed;color:#fff;font-size:16px;font-weight:800;touch-action:pan-y;user-select:none;-webkit-user-select:none'},'←  DESLIZE PARA A DIREITA PARA SAIR  →');
+  screen.append(circle,exit);document.body.appendChild(screen);
  }
  screen.style.display=show?'flex':'none';
 }
@@ -194,12 +196,46 @@ async function endSession(){
  }catch(e){say('A sessão não foi encerrada corretamente: '+(e.message||e),true);return;}
  await leaveLocal('Compartilhamento encerrado.');
 }
+async function leavePairing(){
+ if(role!=='participant'||!session)return;
+ const c=client(),activeSession=session;
+ if(c){
+  const {error}=await c.from('live_devices').delete().eq('session_id',activeSession.id).eq('device_id',deviceId);
+  if(error){say('Não foi possível sair do pareamento: '+error.message,true);return;}
+ }
+ await leaveLocal('Você saiu do pareamento. Para voltar, informe novamente o código do aparelho principal.');
+}
 async function leaveLocal(message){
  if(heartbeat)clearInterval(heartbeat);heartbeat=null;if(stateTimer)clearTimeout(stateTimer);stateTimer=null;
  if(channel){const c=client();if(c)await c.removeChannel(channel);}channel=null;session=null;role=null;document.body.classList.remove('live-follower');waitingScreen(false);
  $('liveCodeBox').style.display='none';$('liveDeviceList').replaceChildren();await refreshPanel();say(message||'Conexão encerrada.');
 }
+let swipeStart=null;
+function swipeTarget(target){return target&&target.closest('.live-swipe-exit,.back-button,.format-back-button');}
+document.addEventListener('pointerdown',event=>{
+ const button=swipeTarget(event.target);
+ if(role!=='participant'||!button)return;
+ swipeStart={button,id:event.pointerId,x:event.clientX};
+ button.style.transition='none';
+ try{button.setPointerCapture(event.pointerId);}catch(_){}
+},true);
+document.addEventListener('pointermove',event=>{
+ if(!swipeStart||event.pointerId!==swipeStart.id)return;
+ const dx=Math.max(0,event.clientX-swipeStart.x);
+ swipeStart.button.style.transform='translateX('+Math.min(dx,180)+'px)';
+},true);
+async function finishSwipe(event,cancelled){
+ if(!swipeStart||event.pointerId!==swipeStart.id)return;
+ const item=swipeStart;swipeStart=null;
+ const dx=event.clientX-item.x;
+ item.button.style.transition='transform .18s ease';
+ item.button.style.transform='';
+ if(!cancelled&&dx>Math.max(70,item.button.getBoundingClientRect().width*.32))await leavePairing();
+}
+document.addEventListener('pointerup',event=>finishSwipe(event,false),true);
+document.addEventListener('pointercancel',event=>finishSwipe(event,true),true);
 document.addEventListener('click',event=>{
+ if(role==='participant'&&swipeTarget(event.target)){event.preventDefault();event.stopImmediatePropagation();return;}
  if(role==='participant'&&(event.target.closest('#layout')||event.target.closest('.song'))){event.preventDefault();event.stopImmediatePropagation();}
 },true);
 document.addEventListener('click',event=>{
@@ -207,6 +243,6 @@ document.addEventListener('click',event=>{
 },true);
 document.addEventListener('scroll',event=>{if(event.target&&event.target.id==='songReading')queuePublish();},true);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&role==='leader')publishState(true);});
-const style=el('style');style.textContent='.live-follower #detail .song-fixed-actions{opacity:.45;pointer-events:none!important}.live-follower #detail .format-tools{pointer-events:none!important}';document.head.appendChild(style);
+const style=el('style');style.textContent='.live-follower #detail .song-fixed-actions{opacity:1;pointer-events:none!important}.live-follower #detail .song-fixed-actions .back-button{opacity:1;background:#0878ed!important;color:#fff!important;border-color:#0668d2!important;pointer-events:auto!important;touch-action:pan-y;user-select:none;-webkit-user-select:none}.live-follower #detail .format-tools{pointer-events:none!important}.live-follower #detail .format-tools .format-back-button{opacity:1;background:#0878ed!important;color:#fff!important;border-color:#0668d2!important;pointer-events:auto!important;touch-action:pan-y;user-select:none;-webkit-user-select:none}.live-swipe-exit{box-shadow:0 3px 10px #0004}';document.head.appendChild(style);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 })();
