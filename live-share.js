@@ -63,6 +63,7 @@ async function startAsLeader(){
   if(deviceError)throw deviceError;
   $('liveCodeValue').textContent=invite;$('liveCodeBox').style.display='block';
   await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código com até quatro aparelhos.');
+  $('liveShareModal').style.display='none';
  }catch(e){
   if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
   if(session&&role==='leader'){try{await c.from('live_sessions').delete().eq('id',session.id);}catch(_){}}
@@ -96,6 +97,7 @@ async function joinSession(){
   const {data:latest,error:stateError}=await c.from('live_sessions').select('*').eq('id',session.id).single();
   if(!stateError&&latest)applyState(latest);
   await loadDevices();await refreshPanel();say('Aparelho autorizado e conectado. Agora acompanha o aparelho principal.');
+  $('liveShareModal').style.display='none';
  }catch(e){
   if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
   if(session&&role==='participant'){try{await c.from('live_devices').delete().eq('session_id',session.id).eq('device_id',deviceId);}catch(_){}}
