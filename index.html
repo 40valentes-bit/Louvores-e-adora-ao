@@ -3472,6 +3472,8 @@ function transposeText(txt,n){
 }
 let scrollLastFrameTime=null;
 let scrollPositionExact=null;
+// Alvo remoto usado para compensar diferenças de relógio sem saltos no Android.
+let liveScrollTarget=null;
 function updateScrollButtons(running){
  const b=$('autoScroll'),navToggle=$('readingToggleControl'),footerButton=$('readingFooterToggle');
  if(b)b.textContent=running?'Ⅱ Pausar rolagem':'▶ Retomar rolagem';
@@ -3482,6 +3484,7 @@ function stopAutoScroll(){
  if(scrollTimer){cancelAnimationFrame(scrollTimer);scrollTimer=null;}
  scrollLastFrameTime=null;
  scrollPositionExact=null;
+ liveScrollTarget=null;
  updateScrollButtons(false);
  // Mantém o modo de leitura e os controles no mesmo lugar ao pausar.
 }
@@ -3501,6 +3504,15 @@ function startAutoScroll(){
    // baixas sejam arredondadas para zero em navegadores móveis e desktop.
    const elapsed=Math.min(100,Math.max(0,timestamp-scrollLastFrameTime));
    scrollPositionExact+= (elapsed/1000)*48*scrollSpeed;
+   // Ajuste progressivo e limitado: evita saltos quando os pacotes de
+   // sincronização chegam em intervalos diferentes no Android.
+   if(liveScrollTarget!==null){
+    const drift=liveScrollTarget-scrollPositionExact;
+    const maxCorrection=Math.max(0.08,Math.min(1.2,0.24*scrollSpeed));
+    const correction=Math.max(-maxCorrection,Math.min(maxCorrection,drift*0.035));
+    scrollPositionExact+=correction;
+    if(Math.abs(drift)<1)liveScrollTarget=null;
+   }
    area.scrollTop=scrollPositionExact;
    scrollLastFrameTime=timestamp;
   }
@@ -3820,14 +3832,17 @@ window.LouvoresApp={
   if(area&&Number.isFinite(Number(state.scroll_top))){
    const targetTop=Math.max(0,Number(state.scroll_top));
    const drift=Math.abs(area.scrollTop-targetTop);
-   // Android pode apresentar pequenas diferenças de temporização entre
-   // aparelhos; tolerar mais desvio evita saltos visíveis a cada pacote.
-   // iPhone, notebook e demais plataformas mantêm o limite original.
    const isAndroid=/Android/i.test(navigator.userAgent||'');
-   const correctionLimit=state.is_scrolling?(isAndroid?180:36):2;
-   if(drift>correctionLimit){
-    area.scrollTop=targetTop;
-    if(scrollTimer)scrollPositionExact=targetTop;
+   if(isAndroid&&state.is_scrolling){
+    // Enquanto rola, o Android acompanha o alvo remoto gradualmente,
+    // sem reposicionar a área de leitura de forma brusca.
+    liveScrollTarget=targetTop;
+   }else{
+    const correctionLimit=state.is_scrolling?36:2;
+    if(drift>correctionLimit){
+     area.scrollTop=targetTop;
+     if(scrollTimer)scrollPositionExact=targetTop;
+    }
    }
   }
   if(state.is_scrolling){if(!scrollTimer)startAutoScroll();}
