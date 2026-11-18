@@ -3479,6 +3479,7 @@ let scrollLastFrameTime=null;
 let scrollPositionExact=null;
 // Alvo remoto usado para compensar diferenças de relógio sem saltos no Android.
 let liveScrollTarget=null;
+let liveSyncActive=false;
 function updateScrollButtons(running){
  const b=$('autoScroll'),navToggle=$('readingToggleControl'),footerButton=$('readingFooterToggle');
  if(b)b.textContent=running?'Ⅱ Pausar rolagem':'▶ Retomar rolagem';
@@ -3521,7 +3522,10 @@ function startAutoScroll(){
    area.scrollTop=scrollPositionExact;
    scrollLastFrameTime=timestamp;
   }
-  if(area.scrollTop+area.clientHeight>=area.scrollHeight-2){stopAutoScroll();return;}
+  const maxScroll=Math.max(0,area.scrollHeight-area.clientHeight);
+  scrollPositionExact=Math.max(0,Math.min(maxScroll,scrollPositionExact));
+  area.scrollTop=scrollPositionExact;
+  if(area.scrollTop+area.clientHeight>=area.scrollHeight-2&&!liveSyncActive){stopAutoScroll();return;}
   scrollTimer=requestAnimationFrame(animate);
  };
  scrollTimer=requestAnimationFrame(animate);
@@ -3824,7 +3828,9 @@ window.LouvoresApp={
  getLiveState:()=>{
   const song=songs.find(x=>String(x.id)===String(current));
   const area=$('songReading');
-  return {song_key:song?(String(song.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(song.artist||'').trim().toLocaleLowerCase('pt-BR')):null,song_title:song?song.title:null,scroll_top:area?area.scrollTop:0,scroll_speed:scrollSpeed,is_scrolling:!!scrollTimer};
+  const maxScroll=area?Math.max(0,area.scrollHeight-area.clientHeight):0;
+   const progress=maxScroll>0&&area?Math.max(0,Math.min(1,area.scrollTop/maxScroll)):0;
+   return {song_key:song?(String(song.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(song.artist||'').trim().toLocaleLowerCase('pt-BR')):null,song_title:song?song.title:null,scroll_top:area?area.scrollTop:0,scroll_progress:progress,scroll_speed:scrollSpeed,is_scrolling:!!scrollTimer};
  },
  applyLiveState:state=>{
   if(!state||typeof state!=='object')return false;
@@ -3836,26 +3842,25 @@ window.LouvoresApp={
   }
   const area=$('songReading');
   if(Number.isFinite(Number(state.scroll_speed)))setScrollSpeed(Number(state.scroll_speed));
-  // Durante a rolagem, cada aparelho móvel mantém sua própria animação suave.
-  // Corrige apenas diferenças grandes para não disputar scrollTop a cada pacote.
-  if(area&&Number.isFinite(Number(state.scroll_top))){
-   const targetTop=Math.max(0,Number(state.scroll_top));
-   const drift=Math.abs(area.scrollTop-targetTop);
-   const isAndroid=/Android/i.test(navigator.userAgent||'');
-   if(isAndroid&&state.is_scrolling){
-    // Enquanto rola, o Android acompanha o alvo remoto gradualmente,
-    // sem reposicionar a área de leitura de forma brusca.
-    liveScrollTarget=targetTop;
-   }else{
-    const correctionLimit=state.is_scrolling?36:2;
-    if(drift>correctionLimit){
-     area.scrollTop=targetTop;
-     if(scrollTimer)scrollPositionExact=targetTop;
+  // Usa o progresso relativo da música, não pixels absolutos: cada aparelho
+   // tem dimensões e quebras de linha diferentes, mas acompanha a mesma fração.
+   liveSyncActive=!!state.is_scrolling;
+   if(area){
+    const localMax=Math.max(0,area.scrollHeight-area.clientHeight);
+    const hasProgress=Number.isFinite(Number(state.scroll_progress));
+    const progress=hasProgress?Math.max(0,Math.min(1,Number(state.scroll_progress))):null;
+    const targetTop=progress!==null?progress*localMax:Math.max(0,Number(state.scroll_top)||0);
+    if(!state.is_scrolling){
+     const finalTop=progress!==null?targetTop:Math.min(localMax,targetTop);
+     area.scrollTop=finalTop;
+     scrollPositionExact=finalTop;
+     liveScrollTarget=null;
+    }else{
+     liveScrollTarget=targetTop;
+     if(!scrollTimer)startAutoScroll();
     }
    }
-  }
-  if(state.is_scrolling){if(!scrollTimer)startAutoScroll();}
-  else if(scrollTimer)stopAutoScroll();
+   if(!state.is_scrolling&&scrollTimer)stopAutoScroll();
   updateScrollButtons(!!state.is_scrolling);
   return true;
  },
