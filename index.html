@@ -3771,8 +3771,16 @@ function editSong(id){
 async function deleteSong(id){
  const s=songs.find(x=>x.id===id);if(!s)return;
  if(!confirm('Tem certeza de que deseja excluir “'+s.title+'”? Esta ação não poderá ser desfeita. Faça um backup antes, se quiser guardar esta música.'))return;
- const oldSongs=songs,oldFavorites=favorites;songs=songs.filter(x=>x.id!==id);favorites=favorites.filter(x=>x!==id);if(!await persist()){songs=oldSongs;favorites=oldFavorites;return;}
- if(current===id)backToList();render();
+ try{
+  if(!window.LouvoresCloud||!window.LouvoresCloud.requestMutationPassword)throw new Error('A proteção de administrador ainda não carregou. Recarregue o aplicativo.');
+  const password=await window.LouvoresCloud.requestMutationPassword();
+  if(!password)return;
+  await window.LouvoresCloud.deleteSong(s,password);
+  const oldSongs=songs.map(song=>({...song})),oldFavorites=favorites.slice();
+  songs=songs.filter(x=>x.id!==id);favorites=favorites.filter(x=>x!==id);
+  if(!await persist()){songs=oldSongs;favorites=oldFavorites;await persist();throw new Error('A exclusão na nuvem foi concluída, mas não consegui gravar a lista local. Sincronize este aparelho.');}
+  if(current===id)backToList();render();
+ }catch(e){if(e&&e.message!=='Operação cancelada.')alert('A música não foi excluída: '+(e.message||e));}
 }
 let savingSong=false;
 async function saveSong(){
@@ -3783,27 +3791,28 @@ async function saveSong(){
  const previousSongs=songs.map(song=>({...song})),previousFavorites=favorites.slice();
  try{
   const data={title,artist:$('newArtist').value.trim(),category:$('newCat').value,key:$('newKey').value,chords:$('newChords').value.trim()||'Cifra ainda não cadastrada.',capo:$('newCapo').value.trim(),chordColor:safeColor($('chordColor').value,'#1d4f91'),lyricColor:safeColor($('lyricColor').value,'#172235'),fontFamily:$('songFont').value,bold:$('songBold').checked};
-  let id;
+  const oldSong=editingId!==null?songs.find(x=>x.id===editingId):null;
+  if(editingId!==null&&!oldSong)throw new Error('Não encontrei esta música para editar.');
+  const id=editingId!==null?editingId:songs.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1;
+  const nextSong={...(oldSong||{}),id,...data};
+  if(!window.LouvoresCloud||!window.LouvoresCloud.requestMutationPassword||!window.LouvoresCloud.mutateSong)throw new Error('A proteção de administrador ainda não carregou. Recarregue o aplicativo.');
+  const password=await window.LouvoresCloud.requestMutationPassword();
+  if(!password)return;
+  await window.LouvoresCloud.mutateSong(nextSong,oldSong,password);
   if(editingId!==null){
-   const index=songs.findIndex(x=>x.id===editingId);
-   if(index<0)throw new Error('Não encontrei esta música para editar.');
-   songs[index]={...songs[index],...data};id=editingId;
-  }else{
-   id=songs.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1;
-   songs.push({id,...data});
-  }
+   const songIndex=songs.findIndex(x=>x.id===editingId);
+   songs[songIndex]=nextSong;
+  }else songs.push(nextSong);
   if(!await persist()){
    songs=previousSongs;favorites=previousFavorites;render();
-   alert('A música não foi confirmada como salva. A lista anterior foi mantida. Faça um backup e tente novamente.');
-   return;
+   throw new Error('A música foi enviada à nuvem, mas não foi possível gravar a cópia local. Sincronize este aparelho.');
   }
-  if(window.LouvoresCloud&&window.LouvoresCloud.isApproved())window.LouvoresCloud.publishSong(songs.find(x=>x.id===id)).catch(e=>console.warn('Música salva localmente; envio à nuvem pendente:',e));
   clearSongForm();$('addPanel').style.display='none';filter='Todos';render();
   if(!songs.some(x=>x.id===current))current=null;
   openSong(id);
  }catch(e){
   songs=previousSongs;favorites=previousFavorites;render();
-  alert('Não foi possível salvar o louvor. '+(e&&e.message?e.message:'Confira o armazenamento do navegador.'));
+  if(e&&e.message!=='Operação cancelada.')alert('Não foi possível salvar o louvor. '+(e&&e.message?e.message:'Confira o armazenamento do navegador.'));
  }finally{
   savingSong=false;if(button)button.disabled=false;
  }
