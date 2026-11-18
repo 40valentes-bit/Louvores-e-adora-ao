@@ -136,7 +136,7 @@ async function publishState(force){
 }
 function queuePublish(){
  if(role!=='leader'||applying||stateTimer)return;
- stateTimer=setTimeout(()=>{stateTimer=null;publishState(false);},220);
+ stateTimer=setTimeout(()=>{stateTimer=null;publishState(false);},90);
 }
 async function loadDevices(){
  if(!session||!client())return;
