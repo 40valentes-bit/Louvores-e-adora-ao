@@ -3916,6 +3916,7 @@ window.LouvoresApp={
   updateScrollButtons(!!state.is_scrolling);
   return true;
  },
+ leaveLiveParticipant:()=>{liveSyncActive=false;livePresentationActive=false;backToList();},
  getSongs:()=>songs,
  getFavorites:()=>favorites.slice(),
  persist,
@@ -3939,6 +3940,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 
 
-<script src="./live-share.js?v=20261118-16"></script>
+<script src="./live-share.js?v=20261118-17"></script>
 
 </body></html>
