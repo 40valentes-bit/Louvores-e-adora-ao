@@ -3164,7 +3164,7 @@ if(savedSongs===null){
  seed.forEach(s=>{const k=(s.title+'|'+(s.artist||'')).toLocaleLowerCase('pt-BR');const idx=songs.findIndex(x=>(x.title+'|'+(x.artist||'')).toLocaleLowerCase('pt-BR')===k);if(idx<0){songs.push(s);knownSongs.add(k)}else if(s.chords&&!s.chords.startsWith('Letra e cifra não foram incluídas')&&(!songs[idx].chords||songs[idx].chords.startsWith('Letra e cifra não foram incluídas'))){songs[idx]={...songs[idx],...s,id:songs[idx].id}}});
 }
 let favorites=readLocal('louvores_favs',[]);if(!Array.isArray(favorites))favorites=[];
-let filter='Todos',current=null,offset=0,capoPosition=0,fontSize=18,scrollTimer=null,scrollSpeed=1,editingId=null;
+let filter='Todos',current=null,offset=0,capoPosition=0,fontSize=18,scrollTimer=null,scrollSpeed=0.2,editingId=null;
 const $=id=>document.getElementById(id);
 // Banco local do navegador (IndexedDB): funciona sem internet e guarda a biblioteca
 // separadamente do arquivo HTML. O localStorage permanece como cópia compatível.
@@ -3540,17 +3540,10 @@ function adjustScrollSpeed(delta){
 }
 function backToList(){stopAutoScroll();current=null;document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
- stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
+ stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=0.2;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
-  <div class="song-navigation-actions" aria-label="Ajustar velocidade da rolagem">
-   <div class="scroll-speed-controls">
-    <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-    <span id="speedValue" aria-live="polite">1.0×</span>
-    <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
-   </div>
-  </div>
   <button type="button" class="reading-toggle-control" id="readingToggleControl" onclick="toggleAutoScroll()" aria-label="Iniciar rolagem" title="Iniciar rolagem">INICIAR</button>
   <button type="button" class="back-button" onclick="backToList()">← VOLTAR</button>
  </div>
@@ -3561,10 +3554,15 @@ function openSong(id){
   <label>Fonte <select id="viewFont" oninput="setViewFont(this.value)" aria-label="Fonte">
    <option value="Courier New">Courier New</option><option value="Consolas">Consolas</option><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option>
   </select></label>
-  <div class="text-size-controls" aria-label="Ajustar tamanho do texto e dos acordes">
+  <div class="text-size-controls" aria-label="Ajustar texto e velocidade da rolagem">
    <span>Texto</span>
    <button type="button" onclick="changeFont(-1)" aria-label="Diminuir tamanho do texto e dos acordes" title="Diminuir texto">−</button>
    <button type="button" onclick="changeFont(1)" aria-label="Aumentar tamanho do texto e dos acordes" title="Aumentar texto">+</button>
+   <div class="scroll-speed-controls" aria-label="Ajustar velocidade da rolagem">
+    <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
+    <span id="speedValue" aria-live="polite">0.2×</span>
+    <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
+   </div>
   </div>
   <div class="tone-tools" aria-label="Transposição de tonalidade e capotraste">
    <div class="tone-stepper">
