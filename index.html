@@ -3820,7 +3820,11 @@ window.LouvoresApp={
   if(area&&Number.isFinite(Number(state.scroll_top))){
    const targetTop=Math.max(0,Number(state.scroll_top));
    const drift=Math.abs(area.scrollTop-targetTop);
-   const correctionLimit=state.is_scrolling?36:2;
+   // Android pode apresentar pequenas diferenças de temporização entre
+   // aparelhos; tolerar mais desvio evita saltos visíveis a cada pacote.
+   // iPhone, notebook e demais plataformas mantêm o limite original.
+   const isAndroid=/Android/i.test(navigator.userAgent||'');
+   const correctionLimit=state.is_scrolling?(isAndroid?180:36):2;
    if(drift>correctionLimit){
     area.scrollTop=targetTop;
     if(scrollTimer)scrollPositionExact=targetTop;
