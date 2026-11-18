@@ -118,8 +118,8 @@ function mutationPasswordDialog(isSetup,isReset=false){
   const overlay=node('div',{style:'position:fixed;inset:0;z-index:100000;background:#07182dcc;display:flex;align-items:center;justify-content:center;padding:18px'});
   const panel=node('section',{style:'width:min(100%,420px);background:#fff;color:#172235;border-radius:18px;padding:22px;box-shadow:0 15px 50px #0006'});
   const title=node('h2',{},isReset?'Redefinir senha de administrador':(isSetup?'Cadastrar senha de administrador':'Confirmar alteração'));
-  const message=node('p',{},isSetup?'Crie uma nova senha com pelo menos 12 caracteres e repita para confirmar. Ela protegerá cada inclusão, edição e exclusão de música.':'Digite sua senha de administrador para autorizar esta alteração.');
-  const first=node('input',{type:'password',autocomplete:'new-password',placeholder:isSetup?'Nova senha (mínimo 12 caracteres)':'Senha de administrador',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
+  const message=node('p',{},isSetup?'Crie uma nova senha com pelo menos 6 caracteres e repita para confirmar. Ela protegerá cada inclusão, edição e exclusão de música.':'Digite sua senha de administrador para autorizar esta alteração.');
+  const first=node('input',{type:'password',autocomplete:'new-password',placeholder:isSetup?'Nova senha (mínimo 6 caracteres)':'Senha de administrador',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
   const second=node('input',{type:'password',autocomplete:'new-password',placeholder:'Repita a nova senha',style:'box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border:1px solid #ccd3dd;border-radius:9px'});
   const error=node('p',{style:'color:#b42318;min-height:20px;margin:4px 0'});
   const actions=node('div',{style:'display:flex;gap:10px;justify-content:flex-end;margin-top:12px'});
@@ -130,7 +130,7 @@ function mutationPasswordDialog(isSetup,isReset=false){
   cancel.onclick=()=>finish(null);
   confirm.onclick=()=>{
    const value=first.value;
-   if(value.length<12){error.textContent='Use pelo menos 12 caracteres.';first.focus();return;}
+   if(value.length<6){error.textContent='Use pelo menos 6 caracteres.';first.focus();return;}
    if(isSetup&&value!==second.value){error.textContent='As senhas não conferem.';second.focus();return;}
    finish(value);
   };
