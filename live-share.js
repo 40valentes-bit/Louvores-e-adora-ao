@@ -224,17 +224,19 @@ document.addEventListener('pointermove',event=>{
  const dx=Math.max(0,event.clientX-swipeStart.x);
  swipeStart.button.style.transform='translateX('+Math.min(dx,180)+'px)';
 },true);
+let suppressSwipeClick=false;
 async function finishSwipe(event,cancelled){
  if(!swipeStart||event.pointerId!==swipeStart.id)return;
  const item=swipeStart;swipeStart=null;
  const dx=event.clientX-item.x;
  item.button.style.transition='transform .18s ease';
  item.button.style.transform='';
- if(!cancelled&&dx>Math.max(70,item.button.getBoundingClientRect().width*.32))await leavePairing();
+ if(!cancelled&&dx>Math.max(70,item.button.getBoundingClientRect().width*.32)){suppressSwipeClick=true;await leavePairing();}
 }
 document.addEventListener('pointerup',event=>finishSwipe(event,false),true);
 document.addEventListener('pointercancel',event=>finishSwipe(event,true),true);
 document.addEventListener('click',event=>{
+ if(suppressSwipeClick&&swipeTarget(event.target)){suppressSwipeClick=false;event.preventDefault();event.stopImmediatePropagation();return;}
  if(role==='participant'&&swipeTarget(event.target)){event.preventDefault();event.stopImmediatePropagation();return;}
  if(role==='participant'&&(event.target.closest('#layout')||event.target.closest('.song'))){event.preventDefault();event.stopImmediatePropagation();}
 },true);
