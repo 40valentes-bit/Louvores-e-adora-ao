@@ -1,11 +1,12 @@
-const CACHE_NAME = 'louvores-adoracao-v6';
+const CACHE_NAME = 'louvores-adoracao-v7';
 
 const APP_FILES = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './identidade-louvor-adoracao.webp.b64'
 ];
 
 self.addEventListener('install', event => {
