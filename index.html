@@ -266,6 +266,13 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
  .layout.song-open .format-tools .format-back-button{min-width:82px!important;max-width:94px!important;min-height:34px!important;font-size:11px!important}
 }
 
+/* No iPhone, ao abrir uma música, ocultar a faixa fixa da lista para liberar a tela inteira. */
+@supports (-webkit-touch-callout: none) {
+  body.louvores-song-open .app-shell > .fixed-area {
+    display: none !important;
+  }
+}
+
 /* Ajuste específico para iPhone/iOS: mantém somente os controles inferiores no modo de leitura. */
 @supports (-webkit-touch-callout: none) {
   .layout.song-open.reading-focus .song-fixed-header {
@@ -3508,10 +3515,10 @@ function adjustScrollSpeed(delta){
  const controls=document.querySelector('.scroll-speed-controls');
  if(controls){controls.setAttribute('aria-label','Velocidade da rolagem: '+scrollSpeed.toFixed(1)+' vezes');}
 }
-function backToList(){stopAutoScroll();$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
+function backToList(){stopAutoScroll();document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
  stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
- $('layout').classList.add('song-open');$('detail').style.display='flex';
+ $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
   <div class="song-navigation-actions" aria-label="Ajustar velocidade da rolagem">
