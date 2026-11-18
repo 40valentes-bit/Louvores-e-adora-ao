@@ -1,4 +1,4 @@
-const CACHE_NAME = 'louvores-adoracao-v10';
+const CACHE_NAME = 'louvores-adoracao-v11';
 
 const APP_FILES = [
   './',
@@ -7,6 +7,7 @@ const APP_FILES = [
   './icon-192.png',
   './icon-512.png',
   './identidade-louvor-adoracao.webp',
+  './supabase-account.js?v=20261118-7',
   './live-share.js?v=20261118-11'
 ];
 
