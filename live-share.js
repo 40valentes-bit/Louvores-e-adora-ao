@@ -117,8 +117,20 @@ async function connectChannel(){
  if(role==='leader')publishState(true);
  document.body.classList.toggle('live-follower',role==='participant');
 }
+function waitingScreen(show){
+ let screen=$('liveWaitingScreen');
+ if(!screen){
+  screen=el('div',{id:'liveWaitingScreen',style:'display:none;position:fixed;inset:0;z-index:200000;background:#102b52;color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:34px;padding:28px;text-align:center'});
+  const brand=el('div',{style:'font-size:clamp(25px,6vw,38px);font-weight:800;letter-spacing:1.5px;line-height:1.2'},'LOUVRES E ADORAÇÃO');
+  const message=el('div',{style:'font-size:clamp(19px,4.5vw,25px);font-weight:600;line-height:1.35'},'Aguardando a próxima música...');
+  screen.append(brand,message);document.body.appendChild(screen);
+ }
+ screen.style.display=show?'flex':'none';
+}
 function applyState(payload){
  if(!payload)return;
+ // Nos participantes, a tela de espera substitui a lista quando o principal volta.
+ if(role==='participant')waitingScreen(!payload.song_key);
  // A aplicação do estado é síncrona. Não manter bloqueio artificial de 100 ms:
  // isso descartava comandos PAUSAR/ROLAR que chegavam durante atualizações da rolagem.
  applying=true;
@@ -182,7 +194,7 @@ async function endSession(){
 }
 async function leaveLocal(message){
  if(heartbeat)clearInterval(heartbeat);heartbeat=null;if(stateTimer)clearTimeout(stateTimer);stateTimer=null;
- if(channel){const c=client();if(c)await c.removeChannel(channel);}channel=null;session=null;role=null;document.body.classList.remove('live-follower');
+ if(channel){const c=client();if(c)await c.removeChannel(channel);}channel=null;session=null;role=null;document.body.classList.remove('live-follower');waitingScreen(false);
  $('liveCodeBox').style.display='none';$('liveDeviceList').replaceChildren();await refreshPanel();say(message||'Conexão encerrada.');
 }
 document.addEventListener('click',event=>{
