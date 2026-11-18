@@ -300,6 +300,31 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 }
 
 
+
+/* Identidade visual da abertura: camada independente do aplicativo. */
+#appWelcomeScreen{
+ position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;gap:18px;padding:18px 14px;
+ background:radial-gradient(circle at 50% 34%,#2385d0 0%,#14518f 58%,#082448 100%);
+ color:#fff;text-align:center;cursor:pointer;user-select:none;
+}
+#appWelcomeScreen img{
+ display:block;width:min(100%,820px);max-height:82vh;object-fit:contain;
+ filter:drop-shadow(0 12px 28px #00152d66);
+}
+#appWelcomeScreen .welcome-hint{
+ margin:0;padding:11px 22px;border:1px solid #e4b84f;border-radius:999px;
+ background:#102b52d9;color:#fff;font-size:14px;font-weight:750;letter-spacing:.45px;
+ box-shadow:0 5px 18px #00152d55;
+}
+body:not(.app-entered) .app-shell{visibility:hidden}
+body.app-entered #appWelcomeScreen{display:none}
+@media(max-height:560px){
+ #appWelcomeScreen{gap:8px;padding:8px}
+ #appWelcomeScreen img{max-height:76vh}
+ #appWelcomeScreen .welcome-hint{padding:7px 16px}
+}
+
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -310,6 +335,24 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
 
 </head>
 <body>
+<div id="appWelcomeScreen" role="button" tabindex="0" aria-label="Toque para entrar no aplicativo">
+ <img src="./identidade-louvor-adoracao.webp" alt="Louvor e Adoração" fetchpriority="high" decoding="async">
+ <p class="welcome-hint">TOQUE NA TELA PARA ENTRAR</p>
+</div>
+<script>
+(function(){
+ const screen=document.getElementById('appWelcomeScreen');
+ function enterApp(){
+  document.body.classList.add('app-entered');
+  screen.style.display='none';
+ }
+ screen.addEventListener('click',enterApp);
+ screen.addEventListener('keydown',function(event){
+  if(event.key==='Enter'||event.key===' '){event.preventDefault();enterApp();}
+ });
+})();
+</script>
+
 <div class="app-shell">
   <div class="fixed-area">
     <header><div class="brand">Aplicativo de Musicas</div><h1>Louvores &amp; Adoração</h1></header>
