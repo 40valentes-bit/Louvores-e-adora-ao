@@ -3526,7 +3526,7 @@ function adjustScrollSpeed(delta){
  const controls=document.querySelector('.scroll-speed-controls');
  if(controls){controls.setAttribute('aria-label','Velocidade da rolagem: '+scrollSpeed.toFixed(1)+' vezes');}
 }
-function backToList(){stopAutoScroll();document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
+function backToList(){stopAutoScroll();current=null;document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
  stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=1;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
@@ -3810,12 +3810,21 @@ window.LouvoresApp={
   if(state.song_key){
    const target=songs.find(x=>(String(x.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(x.artist||'').trim().toLocaleLowerCase('pt-BR'))===state.song_key);
    if(target&&String(target.id)!==String(current))openSong(target.id);
+  }else if(current!==null){
+   backToList();
   }
   const area=$('songReading');
-  if(area&&Number.isFinite(Number(state.scroll_top)))area.scrollTop=Math.max(0,Number(state.scroll_top));
+  if(area&&Number.isFinite(Number(state.scroll_top))){
+   const targetTop=Math.max(0,Number(state.scroll_top));
+   if(Math.abs(area.scrollTop-targetTop)>2){
+    area.scrollTop=targetTop;
+    if(scrollTimer)scrollPositionExact=area.scrollTop;
+   }
+  }
   if(Number.isFinite(Number(state.scroll_speed)))setScrollSpeed(Number(state.scroll_speed));
   if(state.is_scrolling){if(!scrollTimer)startAutoScroll();}
   else if(scrollTimer)stopAutoScroll();
+  updateScrollButtons(!!state.is_scrolling);
   return true;
  },
  getSongs:()=>songs,
