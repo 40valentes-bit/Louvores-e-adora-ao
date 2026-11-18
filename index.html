@@ -265,6 +265,28 @@ h1{font-size:20px;line-height:1.1;margin:3px 0 0}
  .layout.song-open .capo-control select{min-width:92px;padding:6px}
  .layout.song-open .format-tools .format-back-button{min-width:82px!important;max-width:94px!important;min-height:34px!important;font-size:11px!important}
 }
+
+/* Ajuste específico para iPhone/iOS: mantém somente os controles inferiores no modo de leitura. */
+@supports (-webkit-touch-callout: none) {
+  .layout.song-open.reading-focus .song-fixed-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+    pointer-events: none !important;
+  }
+  .layout.song-open.reading-focus .song-fixed-actions {
+    pointer-events: auto !important;
+  }
+}
+
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
