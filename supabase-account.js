@@ -265,22 +265,9 @@ async function syncAll(){
   local.splice(0,local.length,...bestByKey.values());
   const removedLocal=beforeCleanup.length-local.length;
   if(removedLocal&&!await window.LouvoresApp.persist())throw new Error('Não foi possível salvar a limpeza local; nenhuma música da nuvem foi removida.');
-  let syncMutationPassword=null;
-  for(const song of local){
-   try{
-    if(!await publishSong(song,syncMutationPassword))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
-   }catch(firstError){
-    // Uma música local nova ou modificada exige a senha de administrador.
-    // Solicita uma vez nesta sincronização e valida a senha no banco em cada gravação.
-    if(syncMutationPassword)throw new Error('Falha ao enviar a música local '+(song.title||'sem título')+': '+(firstError.message||firstError));
-    syncMutationPassword=await requestMutationPassword();
-    try{
-     if(!await publishSong(song,syncMutationPassword))throw new Error('Falha ao enviar a música local: '+(song.title||'sem título'));
-    }catch(retryError){
-     throw new Error('Falha ao enviar a música local '+(song.title||'sem título')+': '+(retryError.message||retryError));
-    }
-   }
-  }
+  // Sincronização dos aparelhos é somente leitura: recebe as músicas da nuvem.
+  // Inclusões, edições e exclusões são enviadas imediatamente pelo fluxo administrativo,
+  // protegido pela senha de administrador em mutateSong/deleteSongCloud.
   const {data:remote,error}=await client.from('shared_songs').select('id,owner_id,title,artist,category,musical_key,capo,chords,chord_color,lyric_color,font_family,bold,source_local_id,created_at').order('created_at');
   if(error)throw error;
   const cloudSettings=await readCloudSettings();
