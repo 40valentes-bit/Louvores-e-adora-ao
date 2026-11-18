@@ -3169,7 +3169,7 @@ if(savedSongs===null){
  seed.forEach(s=>{const k=(s.title+'|'+(s.artist||'')).toLocaleLowerCase('pt-BR');const idx=songs.findIndex(x=>(x.title+'|'+(x.artist||'')).toLocaleLowerCase('pt-BR')===k);if(idx<0){songs.push(s);knownSongs.add(k)}else if(s.chords&&!s.chords.startsWith('Letra e cifra não foram incluídas')&&(!songs[idx].chords||songs[idx].chords.startsWith('Letra e cifra não foram incluídas'))){songs[idx]={...songs[idx],...s,id:songs[idx].id}}});
 }
 let favorites=readLocal('louvores_favs',[]);if(!Array.isArray(favorites))favorites=[];
-let filter='Todos',current=null,offset=0,capoPosition=0,fontSize=18,scrollTimer=null,scrollSpeed=0.2,editingId=null;
+let filter='Todos',current=null,offset=0,capoPosition=0,fontSize=18,scrollTimer=null,scrollSpeed=0.2,editingId=null,livePresentationActive=false;
 const $=id=>document.getElementById(id);
 // Banco local do navegador (IndexedDB): funciona sem internet e guarda a biblioteca
 // separadamente do arquivo HTML. O localStorage permanece como cópia compatível.
@@ -3496,6 +3496,7 @@ function stopAutoScroll(){
 }
 function startAutoScroll(){
  if(scrollTimer)return;
+ livePresentationActive=true;
  const area=$('songReading'),layout=$('layout');
  if(!area)return;
  scrollLastFrameTime=null;
@@ -3546,9 +3547,9 @@ function adjustScrollSpeed(delta){
  const controls=document.querySelector('.scroll-speed-controls');
  if(controls){controls.setAttribute('aria-label','Velocidade da rolagem: '+scrollSpeed.toFixed(1)+' vezes');}
 }
-function backToList(){stopAutoScroll();current=null;document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
+function backToList(){livePresentationActive=false;stopAutoScroll();current=null;document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
- stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=0.2;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
+ livePresentationActive=false;stopAutoScroll();current=id;offset=0;capoPosition=0;fontSize=18;scrollSpeed=0.2;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
@@ -3824,10 +3825,14 @@ window.LouvoresApp={
   const area=$('songReading');
   const maxScroll=area?Math.max(0,area.scrollHeight-area.clientHeight):0;
    const progress=maxScroll>0&&area?Math.max(0,Math.min(1,area.scrollTop/maxScroll)):0;
-   return {song_key:song?(String(song.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(song.artist||'').trim().toLocaleLowerCase('pt-BR')):null,song_title:song?song.title:null,scroll_top:area?area.scrollTop:0,scroll_progress:progress,scroll_speed:scrollSpeed,is_scrolling:!!scrollTimer};
+   return {song_key:song?(String(song.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(song.artist||'').trim().toLocaleLowerCase('pt-BR')):null,song_title:song?song.title:null,presentation_active:!!livePresentationActive,scroll_top:area?area.scrollTop:0,scroll_progress:progress,scroll_speed:scrollSpeed,is_scrolling:!!scrollTimer};
  },
  applyLiveState:state=>{
   if(!state||typeof state!=='object')return false;
+  if(state.presentation_active===false){
+   if(current!==null)backToList();
+   return true;
+  }
   if(state.song_key){
    const target=songs.find(x=>(String(x.title||'').trim().toLocaleLowerCase('pt-BR')+'|'+String(x.artist||'').trim().toLocaleLowerCase('pt-BR'))===state.song_key);
    if(target&&String(target.id)!==String(current))openSong(target.id);
