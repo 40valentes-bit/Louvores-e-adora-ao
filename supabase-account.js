@@ -176,6 +176,11 @@ async function deleteSongCloud(song,password){
  if(error)throw error;
  return true;
 }
+async function readDeletedSongKeys(){
+ const {data,error}=await client.rpc('admin_deleted_song_keys');
+ if(error)throw error;
+ return Array.isArray(data)?data:[];
+}
 async function publishSong(song){
  if(!client||!user||!approved||!song||!song.title)return false;
  if(!hasUsableChords(song))return true;
@@ -227,6 +232,12 @@ async function syncAll(){
  try{
   const local=window.LouvoresApp.getSongs();
   const beforeCleanup=local.slice();
+  const deletedRows=await readDeletedSongKeys();
+  const deletedKeys=new Set(deletedRows.map(songKey));
+  if(deletedKeys.size){
+   const activeLocal=beforeCleanup.filter(song=>!deletedKeys.has(songKey(song)));
+   local.splice(0,local.length,...activeLocal);
+  }
   const favoriteKeysBefore=window.LouvoresApp.getFavorites().map(id=>beforeCleanup.find(song=>String(song.id)===String(id))).filter(hasUsableChords).map(songKey);
   const bestByKey=new Map();
   for(const song of beforeCleanup){
@@ -306,6 +317,7 @@ window.LouvoresCloud={
  requestMutationPassword,
  mutateSong,
  deleteSong:deleteSongCloud,
+ readDeletedSongKeys,
  saveSettings,
  isApproved:()=>approved,
  syncAll
