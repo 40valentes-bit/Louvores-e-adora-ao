@@ -15,8 +15,6 @@ function user(){return cloud()&&cloud().getUser?cloud().getUser():null;}
 function approved(){return !!(cloud()&&cloud().isApproved&&cloud().isApproved());}
 function say(msg,error){const el=$('liveShareStatus');if(el){el.textContent=msg;el.style.color=error?'#b42318':'#176b3a';}}
 function el(tag,attrs={},txt=''){const n=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));if(txt)n.textContent=txt;return n;}
-async function digest(value){const bytes=new TextEncoder().encode(value);const hash=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(hash)).map(x=>x.toString(16).padStart(2,'0')).join('');}
-function code(){const n=new Uint32Array(1);crypto.getRandomValues(n);return String(n[0]%100000000).padStart(8,'0');}
 function mount(){
  const toolbar=document.querySelector('.toolbar');if(!toolbar||$('liveShareBtn'))return;
  const open=el('button',{id:'liveShareBtn',type:'button',class:'soft'},'◉ Compartilhamento ao vivo');toolbar.appendChild(open);
@@ -27,7 +25,7 @@ function mount(){
  const leader=el('button',{id:'liveStartBtn',type:'button',class:'primary',style:'width:100%;margin:8px 0'},'Iniciar como aparelho principal');
  const joinWrap=el('div',{style:'border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px'});
  joinWrap.append(el('label',{},'Código de autorização do aparelho principal'));
- const input=el('input',{id:'liveJoinCode',inputmode:'numeric',maxlength:'8',placeholder:'Digite os 8 números',style:'width:100%;padding:12px;border:1px solid #d8e0ea;border-radius:10px'});
+ const input=el('input',{id:'liveJoinCode',inputmode:'numeric',maxlength:'8',placeholder:'Digite os 4 números',style:'width:100%;padding:12px;border:1px solid #d8e0ea;border-radius:10px'});
  const join=el('button',{id:'liveJoinBtn',type:'button',class:'soft',style:'width:100%;margin-top:8px'},'Autorizar este aparelho');
  joinWrap.append(input,join);
  const codeBox=el('div',{id:'liveCodeBox',style:'display:none;background:#eef5ff;border:1px solid #c7dcf5;border-radius:12px;padding:12px;margin:12px 0;text-align:center'});
@@ -55,18 +53,16 @@ async function startAsLeader(){
  const c=client(),u=user();if(!c||!u||!approved())return;
  try{
   $('liveStartBtn').disabled=true;say('Criando sessão segura…');
-  const invite=code(),hash=await digest(invite);
-  const {data,error}=await c.from('live_sessions').insert({owner_id:u.id,leader_device_id:deviceId,invite_code_hash:hash}).select('*').single();
+  const {data,error}=await c.rpc('create_live_session',{p_device_id:deviceId,p_device_name:deviceName});
   if(error)throw error;
-  session=data;role='leader';
-  const {error:deviceError}=await c.from('live_devices').insert({session_id:session.id,device_id:deviceId,device_name:deviceName,role:'leader',authorized:true,last_seen_at:new Date().toISOString()});
-  if(deviceError)throw deviceError;
-  $('liveCodeValue').textContent=invite;$('liveCodeBox').style.display='block';
-  await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código com até nove aparelhos.');
+  if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Não foi possível criar a sessão.');
+  session=data.session;role='leader';
+  $('liveCodeValue').textContent=data.code;$('liveCodeBox').style.display='block';
+  await connectChannel();await loadDevices();startHeartbeat();await refreshPanel();say('Sessão criada. Compartilhe o código de quatro números com até nove aparelhos.');
   $('liveShareModal').style.display='none';
  }catch(e){
   if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
-  if(session&&role==='leader'){try{await c.from('live_sessions').delete().eq('id',session.id);}catch(_){}}
+  if(session&&role==='leader'){try{await c.from('live_sessions').delete().eq('id',session.id);}catch(_){ }}
   say('Não foi possível iniciar: '+(e.message||e),true);session=null;role=null;
  }
  finally{$('liveStartBtn').disabled=false;}
@@ -74,33 +70,22 @@ async function startAsLeader(){
 async function joinSession(){
  const c=client();if(!c||!approved())return;
  try{
-  const invite=$('liveJoinCode').value.replace(/\D/g,'');
-  if(invite.length!==8)throw new Error('O código deve ter 8 números.');
+  const invite=$('liveJoinCode').value.replace(/\\D/g,'');
+  if(!/^(?:\\d{4}|\\d{8})$/.test(invite))throw new Error('Informe o código de quatro números.');
   say('Verificando autorização…');$('liveJoinBtn').disabled=true;
-  const hash=await digest(invite);
-  const {data,error}=await c.from('live_sessions').select('*').eq('invite_code_hash',hash).eq('status','active').maybeSingle();
-  if(error)throw error;if(!data)throw new Error('Código inválido ou sessão encerrada.');
-  const {data:existing,error:existingError}=await c.from('live_devices').select('authorized').eq('session_id',data.id).eq('device_id',deviceId).maybeSingle();
-  if(existingError)throw existingError;
-  if(existing&&!existing.authorized)throw new Error('Este aparelho teve o acesso revogado pelo principal.');
-  if(!existing){
-   const {count,error:countError}=await c.from('live_devices').select('*',{count:'exact',head:true}).eq('session_id',data.id).eq('authorized',true);
-   if(countError)throw countError;
-   if((count||0)>=MAX_DEVICES)throw new Error('Esta sessão já atingiu o limite de dez aparelhos.');
-   const {error:deviceError}=await c.from('live_devices').insert({session_id:data.id,device_id:deviceId,device_name:deviceName,role:'participant',authorized:true});
-   if(deviceError)throw deviceError;
-  }
-  session=data;role='participant';localSpeedOverride=false;waitingScreen(true);await connectChannel();
-  const {error:touchError}=await c.from('live_devices').update({last_seen_at:new Date().toISOString()}).eq('session_id',data.id).eq('device_id',deviceId);
-  if(touchError)throw touchError;
-  startHeartbeat();
+  const {data,error}=await c.rpc('join_live_session',{
+   p_code:invite,p_device_id:deviceId,p_device_name:deviceName
+  });
+  if(error)throw error;
+  if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Não foi possível autorizar este aparelho.');
+  session=data.session;role='participant';localSpeedOverride=false;waitingScreen(true);
+  await connectChannel();startHeartbeat();
   await loadDevices();await refreshPanel();say('Aparelho autorizado e conectado. Agora acompanha o aparelho principal.');
   $('liveShareModal').style.display='none';
  }catch(e){
   if(channel){try{await c.removeChannel(channel);}catch(_){}}channel=null;
-  if(session&&role==='participant'){try{await c.from('live_devices').delete().eq('session_id',session.id).eq('device_id',deviceId);}catch(_){}}
-  session=null;role=null;document.body.classList.remove('live-follower');
-  say('Não foi possível conectar: '+(e.message||e),true);
+  say('Não foi possível autorizar: '+(e.message||e),true);
+  session=null;role=null;
  }
  finally{$('liveJoinBtn').disabled=false;}
 }
