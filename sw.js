@@ -1,4 +1,4 @@
-const CACHE_NAME = 'louvores-adoracao-v19';
+const CACHE_NAME = 'louvores-adoracao-v20';
 
 const APP_FILES = [
   './',
@@ -8,7 +8,7 @@ const APP_FILES = [
   './icon-512.png',
   './identidade-louvor-adoracao.webp',
   './supabase-account.js?v=20261118-7',
-  './live-share.js?v=20261118-19'
+  './live-share.js?v=20261118-20'
 ];
 
 self.addEventListener('install', event => {
