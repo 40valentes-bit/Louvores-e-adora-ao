@@ -70,8 +70,8 @@ async function startAsLeader(){
 async function joinSession(){
  const c=client();if(!c||!approved())return;
  try{
-  const invite=$('liveJoinCode').value.replace(/\\D/g,'');
-  if(!/^(?:\\d{4}|\\d{8})$/.test(invite))throw new Error('Informe o código de quatro números.');
+  const invite=$('liveJoinCode').value.replace(/\D/g,'');
+  if(!/^(?:\d{4}|\d{8})$/.test(invite))throw new Error('Informe o código de quatro números.');
   say('Verificando autorização…');$('liveJoinBtn').disabled=true;
   const {data,error}=await c.rpc('join_live_session',{
    p_code:invite,p_device_id:deviceId,p_device_name:deviceName
