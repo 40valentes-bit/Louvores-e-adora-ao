@@ -3536,6 +3536,8 @@ function stopAutoScroll(){
  scrollPositionExact=null;
  liveScrollTarget=null;
  updateScrollButtons(false);
+ // Avisa o compartilhamento ao vivo para que todos os aparelhos pausem juntos.
+ window.dispatchEvent(new Event('louvores-scroll-state-change'));
  // Mantém o modo de leitura e os controles no mesmo lugar ao pausar.
 }
 function startAutoScroll(){
@@ -3940,6 +3942,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 
 
-<script src="./live-share.js?v=20261118-19"></script>
+<script src="./live-share.js?v=20261118-20"></script>
 
 </body></html>
