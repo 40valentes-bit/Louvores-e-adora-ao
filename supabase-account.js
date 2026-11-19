@@ -33,7 +33,7 @@ function mount(){
  const actions=node('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
  const login=node('button',{id:'cloudLogin',type:'button'},'Entrar');
  const signup=node('button',{id:'cloudSignup',type:'button',class:'soft'},'Criar conta');
- const logout=node('button',{id:'cloudLogout',type:'button',class:'soft',style:'display:none'},'Sair');
+ const logout=node('button',{id:'cloudLogout',type:'button',class:'soft',style:'display:none'},'Fechar sem sair');
  const close=node('button',{id:'cloudClose',type:'button',class:'soft'},'Fechar');
  actions.append(login,signup,logout,close);
  const tools=node('div',{id:'cloudSyncActions',style:'display:none;margin-top:14px;border-top:1px solid #ddd;padding-top:12px'});
@@ -87,8 +87,11 @@ async function doSignup(){
  status('Cadastro enviado. Confirme o e-mail, se solicitado. Depois o administrador deverá aprovar o acesso.');
  if(user)await checkApproval();
 }
-async function doLogout(){
- await client.auth.signOut();user=null;approved=false;byId('cloudSyncActions').style.display='none';byId('cloudAdmin').replaceChildren();status('Você saiu da conta.');
+function doLogout(){
+ // Fechar a janela da conta não encerra a sessão: ela deve sobreviver ao fechamento
+ // do app e à reinicialização do aparelho. A sessão só é removida ao apagar os dados do site.
+ byId('cloudAccountModal').style.display='none';
+ status('Sessão mantida neste aparelho. Você continuará conectado ao reabrir o aplicativo.');
 }
 async function loadPending(){
  const box=byId('cloudAdmin');box.replaceChildren(node('h3',{},'Aprovar novos usuários'));
@@ -341,7 +344,9 @@ window.LouvoresCloud={
 async function start(){
  mount();
  if(!window.supabase||!window.supabase.createClient){status('O serviço de conexão não carregou. Verifique a internet e recarregue.');return;}
- client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+ client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}
+ });
  const {data,error}=await client.auth.getSession();
  if(error){status('Falha ao iniciar a sessão: '+error.message,true);return;}
  user=data.session&&data.session.user||null;
