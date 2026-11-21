@@ -367,6 +367,9 @@ body.app-entered #appWelcomeScreen{display:none}
  .toolbar #restoreBtn,.toolbar #backupBtn,.toolbar #cleanEmptyBtn,.toolbar #liveShareBtn,.toolbar #cloudAccountBtn{font-size:12px!important}
 }
 
+
+.layout.song-open .save-display-settings{min-height:34px!important;padding:7px 13px!important;background:#0878ed!important;color:#fff!important;border:1px solid #0668d2!important;border-radius:9px!important;font-size:12px!important;font-weight:800!important;line-height:1!important;white-space:nowrap!important;box-shadow:0 2px 5px rgba(8,120,237,.18)!important}
+@media(max-width:600px){.layout.song-open .save-display-settings{min-height:31px!important;padding:6px 9px!important;font-size:11px!important}}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -3651,9 +3654,13 @@ function adjustScrollSpeed(delta){
  const controls=document.querySelector('.scroll-speed-controls');
  if(controls){controls.setAttribute('aria-label','Velocidade da rolagem: '+scrollSpeed.toFixed(1)+' vezes');}
 }
+function saveDisplaySettings(){
+ try{localStorage.setItem('louvores_display_settings',JSON.stringify({fontSize,scrollSpeed}));}
+ catch(e){console.warn('Não foi possível salvar as configurações de leitura.',e);}
+}
 function backToList(){livePresentationActive=false;stopAutoScroll();current=null;document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
- livePresentationActive=false;stopAutoScroll();current=id;offset=0;capoPosition=Math.max(0,Math.min(12,Math.round(Number(savedCapoPositions[String(id)])||0)));fontSize=18;scrollSpeed=0.2;document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
+ livePresentationActive=false;stopAutoScroll();current=id;offset=0;capoPosition=Math.max(0,Math.min(12,Math.round(Number(savedCapoPositions[String(id)])||0)));const displaySettings=readLocal('louvores_display_settings',{fontSize:18,scrollSpeed:0.2});fontSize=Math.max(12,Math.min(32,Number(displaySettings.fontSize)||18));scrollSpeed=Math.max(0.2,Math.min(5,Number(displaySettings.scrollSpeed)||0.2));document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
@@ -3678,6 +3685,7 @@ function openSong(id){
    <span class="speed-value" aria-live="polite">0.2×</span>
    <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
   </div>
+  <button type="button" class="save-display-settings" onclick="saveDisplaySettings();this.textContent='SALVO';setTimeout(()=>{if(this.isConnected)this.textContent='SALVAR';},1400)" aria-label="Salvar tamanho do texto e velocidade">SALVAR</button>
   <div class="tone-tools" aria-label="Transposição de tonalidade e capotraste">
    <div class="tone-stepper">
     <span class="tone-caption">TOM</span>
