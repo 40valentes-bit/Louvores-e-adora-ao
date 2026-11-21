@@ -144,10 +144,12 @@ function mutationPasswordDialog(isSetup,isReset=false){
  });
 }
 async function requestMutationPassword(){
- if(!client||!user||!approved)throw new Error('Entre na conta principal 123plicativo@gmail.com e confirme a aprovação antes de alterar músicas.');
- if(user.id!=='4148b351-24b5-4a22-bfa5-d0cc1601fa83')throw new Error('Somente a conta principal está autorizada a alterar músicas.');
+ if(!client||!user||!approved)throw new Error('A conta precisa estar aprovada para alterar músicas centrais.');
  const {data:configured,error:statusError}=await client.rpc('admin_mutation_password_is_set');
  if(statusError)throw new Error('Não foi possível verificar a proteção de senha: '+statusError.message);
+ if(!configured&&user.id!=='4148b351-24b5-4a22-bfa5-d0cc1601fa83'){
+  throw new Error('A conta principal precisa cadastrar a senha de administrador antes das alterações.');
+ }
  const password=await mutationPasswordDialog(!configured);
  if(!password)throw new Error('Operação cancelada.');
  if(!configured){
@@ -184,12 +186,12 @@ async function rpcSongUpsert(song,password=null,oldSong=null){
  return data;
 }
 async function mutateSong(song,oldSong,password){
- if(!client||!user||!approved)throw new Error('Conta principal sem sessão aprovada.');
+ if(!client||!user||!approved)throw new Error('A conta precisa estar aprovada para alterar músicas centrais.');
  await rpcSongUpsert(song,password,oldSong);
  return true;
 }
 async function deleteSongCloud(song,password){
- if(!client||!user||!approved)throw new Error('Conta principal sem sessão aprovada.');
+ if(!client||!user||!approved)throw new Error('A conta precisa estar aprovada para alterar músicas centrais.');
  const {error}=await client.rpc('admin_delete_song',{
   p_password:password,p_title:song.title,p_artist:song.artist||''
  });
