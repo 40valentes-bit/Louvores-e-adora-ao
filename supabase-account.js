@@ -57,8 +57,8 @@ function mount(){
  resetAdmin.onclick=resetAdminMutationPassword;
  const admin=node('div',{id:'cloudAdmin',style:'margin-top:14px'});
  panel.append(heading,msg,emailLabel,passLabel,actions,tools,admin);modal.appendChild(panel);document.body.appendChild(modal);
- open.onclick=()=>{modal.style.display='flex';refresh();};
- close.onclick=()=>modal.style.display='none';
+ open.onclick=()=>{byId('cloudSync').disabled=false;paintSyncButton(false);modal.style.display='flex';refresh();};
+ close.onclick=()=>{byId('cloudSync').disabled=true;paintSyncButton(false);modal.style.display='none';};
  login.onclick=doLogin;signup.onclick=doSignup;logout.onclick=doLogout;sync.onclick=syncAll;byId('cloudSetOrder').onclick=setCanonicalOrder;
 }
 async function refresh(){
