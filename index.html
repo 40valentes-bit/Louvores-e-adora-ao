@@ -3655,12 +3655,25 @@ function adjustScrollSpeed(delta){
  if(controls){controls.setAttribute('aria-label','Velocidade da rolagem: '+scrollSpeed.toFixed(1)+' vezes');}
 }
 function saveDisplaySettings(){
- try{localStorage.setItem('louvores_display_settings',JSON.stringify({fontSize,scrollSpeed}));}
- catch(e){console.warn('Não foi possível salvar as configurações de leitura.',e);}
+ if(current===null||current===undefined){alert('Abra uma música antes de salvar as configurações.');return;}
+ try{
+  const all=readLocal('louvores_display_settings_by_song',{});
+  const settings=(all&&typeof all==='object'&&!Array.isArray(all))?all:{};
+  settings[String(current)]={fontSize,scrollSpeed};
+  localStorage.setItem('louvores_display_settings_by_song',JSON.stringify(settings));
+  const button=document.querySelector('.save-display-settings');
+  if(button){button.textContent='SALVO';setTimeout(()=>{if(button.isConnected)button.textContent='SALVAR';},1400);}
+ }catch(e){console.warn('Não foi possível salvar as configurações desta música.',e);alert('Não foi possível salvar as configurações desta música neste aparelho.');}
 }
 function backToList(){livePresentationActive=false;stopAutoScroll();current=null;document.body.classList.remove('louvores-song-open');$('layout').classList.remove('reading-focus');$('layout').classList.remove('song-open');$('detail').style.display='none';window.scrollTo({top:0,behavior:'instant'});}
 function openSong(id){
- livePresentationActive=false;stopAutoScroll();current=id;offset=0;capoPosition=Math.max(0,Math.min(12,Math.round(Number(savedCapoPositions[String(id)])||0)));const displaySettings=readLocal('louvores_display_settings',{fontSize:18,scrollSpeed:0.2});fontSize=Math.max(12,Math.min(32,Number(displaySettings.fontSize)||18));scrollSpeed=Math.max(0.2,Math.min(5,Number(displaySettings.scrollSpeed)||0.2));document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
+ livePresentationActive=false;stopAutoScroll();current=id;offset=0;capoPosition=Math.max(0,Math.min(12,Math.round(Number(savedCapoPositions[String(id)])||0)));
+ const legacySettings=readLocal('louvores_display_settings',{fontSize:18,scrollSpeed:0.2});
+ const perSongSettings=readLocal('louvores_display_settings_by_song',{});
+ const displaySettings=perSongSettings&&typeof perSongSettings==='object'&&!Array.isArray(perSongSettings)?(perSongSettings[String(id)]||legacySettings):legacySettings;
+ fontSize=Math.max(12,Math.min(32,Number(displaySettings.fontSize)||18));
+ scrollSpeed=Math.max(0.2,Math.min(5,Number(displaySettings.scrollSpeed)||0.2));
+ document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
  $('detail').innerHTML=`<div class="song-fixed-header">
  <div class="song-fixed-actions">
