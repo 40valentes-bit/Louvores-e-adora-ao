@@ -3671,7 +3671,8 @@ function openSong(id){
  const legacySettings=readLocal('louvores_display_settings',{fontSize:18,scrollSpeed:0.2});
  const perSongSettings=readLocal('louvores_display_settings_by_song',{});
  const displaySettings=perSongSettings&&typeof perSongSettings==='object'&&!Array.isArray(perSongSettings)?(perSongSettings[String(id)]||legacySettings):legacySettings;
- fontSize=Math.max(12,Math.min(32,Number(displaySettings.fontSize)||18));
+ // Restaura o tamanho padrão em todas as músicas; novas escolhas só valem após SALVAR naquela música.
+ fontSize=18;
  scrollSpeed=Math.max(0.2,Math.min(5,Number(displaySettings.scrollSpeed)||0.2));
  document.documentElement.style.setProperty('--cifra-size',fontSize+'px');const s=songs.find(x=>x.id===id);if(!s)return;
  $('layout').classList.add('song-open');document.body.classList.add('louvores-song-open');$('detail').style.display='flex';
