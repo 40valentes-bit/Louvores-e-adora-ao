@@ -63,7 +63,7 @@ button{font:inherit;border:0;border-radius:12px;padding:12px 15px;font-weight:70
 .layout.song-open .song-reading{padding-bottom:24px}
 
 .layout.song-open .chords{overflow-x:hidden;overflow-y:visible;max-width:100%;width:100%;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
-.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.detail-head h2{font-size:21px;margin:0}.chords .song-lyric-title{color:#00008b!important;font-size:1.25em;font-weight:700;line-height:1.5;display:inline-block}
+.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.detail-head h2{font-size:21px;margin:0}.chords .song-lyric-title{color:#00008b!important;font-size:1.35em;font-weight:700;line-height:1.6;display:inline-block}
 .chords{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-family:"Courier New",Courier,ui-monospace,monospace;font-size:var(--cifra-size,18px);line-height:1.85;background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;overflow-x:hidden;overflow-y:visible;max-width:100%;width:100%;min-width:0;-webkit-overflow-scrolling:touch}.scroll-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f0f4fa;border-radius:12px;padding:10px;margin:10px 0}.scroll-tools label{margin:0}.scroll-tools input[type=range]{width:115px;padding:0}.scroll-speed-controls{display:flex;align-items:center;gap:3px;padding:2px 4px;background:#f1f3f5;border:1px solid #e0e4e8;border-radius:10px}.scroll-speed-controls button{min-width:28px;min-height:30px;padding:4px 6px;background:#e6e9ed;color:#596575;border:1px solid #d9dee4;border-radius:7px;font-size:16px;line-height:1}.scroll-speed-controls span{min-width:39px}.scroll-speed-controls span{min-width:39px;text-align:center;font-size:13px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}.back-button{background:var(--navy);color:white}.toolbar button,.scroll-tools button{min-height:42px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar button{padding:10px 13px}.format-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 12px;padding:10px;background:#f0f4fa;border-radius:12px}.format-tools label{display:flex;align-items:center;gap:6px;margin:0;color:var(--navy);font-size:13px}.format-tools select{width:auto;min-width:125px;padding:9px 10px}.format-tools input[type=color]{width:42px;height:40px;padding:3px;border-radius:9px}.format-tools input[type=checkbox]{width:19px;height:19px;padding:0}.notice{font-size:12px;color:var(--muted);line-height:1.5;margin-top:12px}
 label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 5px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .empty{text-align:center;color:var(--muted);padding:26px 12px}.hidden{display:none!important}
@@ -3480,9 +3480,13 @@ function renderCifra(song,semitones){
  const normalizedChords=String(song.chords||'')
    .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g,'')
    .replace(/\r\n?/g,'\n');
+ const firstContentLine=normalizedChords.split('\n').find(line=>line.trim())?.trim()||'';
  return transposeText(normalizedChords,semitones).split('\n').map(line=>{
    if(!line) return '<span style="color:'+lyricColor+'"> </span>';
    const trimmed=line.trim();
+   // O título da cifra pode ser destacado ao ser colocado entre colchetes na primeira linha.
+   if(trimmed && trimmed===firstContentLine && /^\\[[^\\]]+\\]$/.test(trimmed))
+     return `<span class="song-lyric-title">${esc(line)}</span>`;
    if(trimmed && trimmed===String(song.title||'').trim())
      return `<span class="song-lyric-title">${esc(line)}</span>`;
    const tokens=trimmed?trimmed.split(/\s+/).filter(Boolean):[];
