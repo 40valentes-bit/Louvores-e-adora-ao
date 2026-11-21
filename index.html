@@ -3679,7 +3679,7 @@ function openSong(id){
  </div>
  </div>
  <div class="detail-head"><div><div class="meta">${esc(s.category)} • ${esc(s.artist||'')}</div><h2>${esc(s.title)}</h2><div class="meta">Tom original: ${esc(s.key||'—')}</div></div></div>
- <div class="song-reading" id="songReading"><div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset)}</div>
+ <div class="song-reading" id="songReading"><div class="chords" id="chordText" style="font-family:${esc(s.fontFamily||'Courier New')},monospace;font-weight:${s.bold?'700':'400'}">${renderCifra(s,offset-capoPosition)}</div>
  </div>
  <button type="button" class="reading-footer-toggle" id="readingFooterToggle" onclick="startAutoScroll()" aria-label="Iniciar rolagem automática" title="Pausar ou iniciar rolagem">▶</button>`;
  const boldControl=$('viewBold'),chordColorControl=$('viewChordColor'),colorControl=$('viewLyricColor'),fontControl=$('viewFont');
@@ -3697,7 +3697,7 @@ function openSong(id){
   });
  }
 }
-function applyViewStyle(){const s=songs.find(x=>x.id===current),el=$('chordText');if(!s||!el)return;el.style.fontFamily='"'+(s.fontFamily||'Courier New')+'", monospace';el.style.fontWeight=s.bold?'700':'400';el.innerHTML=renderCifra(s,offset);}
+function applyViewStyle(){const s=songs.find(x=>x.id===current),el=$('chordText');if(!s||!el)return;el.style.fontFamily='"'+(s.fontFamily||'Courier New')+'", monospace';el.style.fontWeight=s.bold?'700':'400';el.innerHTML=renderCifra(s,offset-capoPosition);}
 async function updateViewPreference(key,value){const s=songs.find(x=>x.id===current);if(!s)return;const old=s[key];s[key]=value;if(!await persist()){s[key]=old;return;}applyViewStyle();}
 function setViewBold(v){updateViewPreference('bold',!!v)}
 function setViewChordColor(v){updateViewPreference('chordColor',safeColor(v,'#1d4f91'))}
@@ -3707,11 +3707,11 @@ function updateToneDisplay(){
  const s=songs.find(x=>x.id===current);if(!s)return;
  const original=String(s.key||'').trim();
  // O capotraste eleva o tom que soa, mas mantém a forma dos acordes.
- const targetRaw=original?transposeChordToken(original,offset+capoPosition):'';
+ const targetRaw=original?transposeChordToken(original,offset):'';
  const target=targetRaw.replace(/^(C#|D#|F#|G#|A#)(.*)$/,(all,root,suffix)=>({ 'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb' }[root]+suffix));
- const shape=original?transposeChordToken(original,offset):'';
+ const shape=original?transposeChordToken(original,offset-capoPosition):'';
  const label=$('toneLabel'),summary=$('toneSummary');
- if(label)label.textContent=target||((offset+capoPosition>0?'+':'')+(offset+capoPosition)+' st');
+ if(label)label.textContent=target||((offset>0?'+':'')+offset+' st');
  if(summary){
   const capoLabel=capoPosition===0?'Sem capotraste':capoPosition+'ª casa';
   summary.replaceChildren();
@@ -3730,7 +3730,7 @@ function updateToneDisplay(){
 }
 function refreshTransposition(){
  const s=songs.find(x=>x.id===current),el=$('chordText');
- if(s&&el)el.innerHTML=renderCifra(s,offset);
+ if(s&&el)el.innerHTML=renderCifra(s,offset-capoPosition);
  updateToneDisplay();
 }
 function changeTone(n){offset+=Number(n)||0;refreshTransposition()}
@@ -3801,7 +3801,7 @@ function setCapo(value){
  window.addEventListener('blur',releaseAll);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
 })();
-function copyCifra(){const s=songs.find(x=>x.id===current);const t=transposeText(s.chords,offset);if(navigator.clipboard)navigator.clipboard.writeText(s.title+'\\n\\n'+t).then(()=>alert('Cifra copiada!'));else alert('Selecione e copie a cifra.')}
+function copyCifra(){const s=songs.find(x=>x.id===current);const t=transposeText(s.chords,offset-capoPosition);if(navigator.clipboard)navigator.clipboard.writeText(s.title+'\\n\\n'+t).then(()=>alert('Cifra copiada!'));else alert('Selecione e copie a cifra.')}
 function clearSongForm(){['newTitle','newArtist','newChords','newCapo'].forEach(x=>$(x).value='');$('newCat').value='Congregacionais';$('newKey').value='C';$('chordColor').value='#1d4f91';$('lyricColor').value='#172235';$('songFont').value='Courier New';$('songBold').checked=false;editingId=null;$('formTitle').textContent='Adicionar louvor à sua biblioteca';$('saveSong').textContent='Salvar louvor'}
 function showAdd(show=true){$('addPanel').style.display=show?'block':'none';if(show)$('newTitle').focus();else clearSongForm()}
 function editSong(id){
