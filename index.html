@@ -3559,7 +3559,10 @@ function transposeText(txt,n){
    return '['+tokens.map(token=>/\s+/.test(token)?token:transposeChordToken(token,n)).join('')+']';
   });
   // Também transpõe acordes entre aspas usados em indicações como [Intro] "C#".
-  result=result.replace(/"([^"]+)"/g,(all,inside)=>chordTokenPattern.test(inside)?'"'+transposeChordToken(inside,n)+'"':all);
+  // Mantém intacto o tom real informado na linha "Tom:", transpondo as cifras entre aspas nas demais linhas (ex.: [Intro]).
+  if(!/^\s*Tom\s*:/i.test(line)){
+   result=result.replace(/"([^"]+)"/g,(all,inside)=>chordTokenPattern.test(inside)?'"'+transposeChordToken(inside,n)+'"':all);
+  }
   return result;
  }).join('\n');
 }
