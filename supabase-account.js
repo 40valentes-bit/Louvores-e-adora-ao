@@ -24,15 +24,9 @@ function paintSyncButton(success){
  button.style.border='1px solid '+(success?'#11632e':'#a51f1f');
  button.style.fontWeight='700';
 }
-function syncStateKey(){return 'louvores_cloud_sync_ok_'+(user&&user.id?user.id:'device');}
-function restoreSyncButtonState(){
- let success=false;
- try{success=!!(user&&localStorage.getItem(syncStateKey())==='1');}catch(e){}
- paintSyncButton(success);
-}
 function markSyncSuccess(){
+ // O verde vale somente para a sessão atual, após uma sincronização concluída.
  paintSyncButton(true);
- try{if(user)localStorage.setItem(syncStateKey(),'1');}catch(e){}
 }
 function mount(){
  const toolbar=document.querySelector('.toolbar');
@@ -76,7 +70,6 @@ async function refresh(){
  if(!user){approved=false;status('Entre ou crie uma conta. A biblioteca local continua protegida.');return;}
  byId('cloudEmail').value=user.email||'';
  await checkApproval();
- restoreSyncButtonState();
 }
 async function checkApproval(){
  const {data,error}=await client.from('user_approvals').select('approved').eq('user_id',user.id).maybeSingle();
@@ -92,6 +85,7 @@ async function checkApproval(){
  if((user.email||'').toLowerCase()===ADMIN_EMAIL)loadPending();
 }
 async function doLogin(){
+ paintSyncButton(false);
  const email=byId('cloudEmail').value.trim(),password=byId('cloudPassword').value;
  const {data,error}=await client.auth.signInWithPassword({email,password});
  if(error){status('Não foi possível entrar: '+error.message,true);return;}
@@ -361,7 +355,7 @@ async function syncAll(){
   await saveSettings();
   markSyncSuccess();
   status('Sincronização concluída. '+added+' música(s) nova(s) adicionada(s); '+updated+' música(s) atualizada(s) com a versão da nuvem; '+removedLocal+' registro(s) sem cifra ou duplicado(s) removido(s) deste aparelho. Ordem oficial: '+(orderKeys&&orderKeys.length?orderMatched+'/'+local.length+' músicas reconhecidas; '+(appendedToOfficial?appendedToOfficial+' música(s) incorporada(s) automaticamente à ordem oficial. ': '')+(reordered?'lista reordenada e salva':'lista já estava nessa ordem'):'não encontrada na nuvem')+'. Cifras válidas preservadas.');
- }catch(e){paintSyncButton(false);try{if(user)localStorage.removeItem(syncStateKey());}catch(storageError){}status('A sincronização não foi concluída: '+(e.message||e),true);}
+ }catch(e){paintSyncButton(false);status('A sincronização não foi concluída: '+(e.message||e),true);}
  finally{syncBusy=false;byId('cloudSync').disabled=false;}
 }
 window.LouvoresCloud={
