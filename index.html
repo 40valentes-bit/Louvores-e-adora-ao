@@ -3668,7 +3668,7 @@ function openSong(id){
   <div class="scroll-speed-controls footer-speed-controls" aria-label="Velocidade da rolagem">
    <strong class="speed-caption">Velocidade</strong>
    <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-   <span class="speed-value" aria-live="polite">0.2×</span>
+   <span class="speed-value" aria-live="polite">${scrollSpeed.toFixed(1)}×</span>
    <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
   </div>
   <button type="button" class="back-button" onclick="backToList()">← VOLTAR</button>
@@ -3682,7 +3682,7 @@ function openSong(id){
   <div class="scroll-speed-controls" aria-label="Velocidade da rolagem">
    <strong class="speed-caption">Velocidade</strong>
    <button type="button" onclick="adjustScrollSpeed(-0.2);event.stopPropagation();" aria-label="Diminuir velocidade" title="Diminuir velocidade">−</button>
-   <span class="speed-value" aria-live="polite">0.2×</span>
+   <span class="speed-value" aria-live="polite">${scrollSpeed.toFixed(1)}×</span>
    <button type="button" onclick="adjustScrollSpeed(0.2);event.stopPropagation();" aria-label="Aumentar velocidade" title="Aumentar velocidade">+</button>
   </div>
   <button type="button" class="save-display-settings" onclick="saveDisplaySettings();this.textContent='SALVO';setTimeout(()=>{if(this.isConnected)this.textContent='SALVAR';},1400)" aria-label="Salvar tamanho do texto e velocidade">SALVAR</button>
