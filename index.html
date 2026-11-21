@@ -23,7 +23,9 @@ button{font:inherit;border:0;border-radius:12px;padding:12px 15px;font-weight:70
 .filters{display:flex;gap:8px;overflow:auto;padding:13px 0}.filters button{white-space:nowrap;padding:9px 13px;font-size:13px}
 .stats{display:flex;gap:10px;margin:4px 0 15px}.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px;flex:1}.stat b{display:block;font-size:19px;color:var(--navy)}.stat span{font-size:11px;color:var(--muted)}
 .layout{display:grid;grid-template-columns:1fr;gap:14px}.panel,.song{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 3px 14px #18365b0b}
-.panel h2{font-size:16px;margin:0 0 12px}.song{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}.song h3{font-size:15px;margin:0 0 4px}.meta{font-size:12px;color:var(--muted)}.song-actions{display:flex;gap:6px;align-items:center}.icon{font-size:20px;padding:8px;background:#f0f4fa;color:var(--navy)}
+.panel h2{font-size:16px;margin:0 0 12px}.song{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}.song h3{font-size:15px;margin:0 0 4px}.meta{font-size:12px;color:var(--muted)}
+.layout.song-open .detail-head h2{color:#00008b!important}
+.song-actions{display:flex;gap:6px;align-items:center}.icon{font-size:20px;padding:8px;background:#f0f4fa;color:var(--navy)}
 #detail{display:none}
 .layout.song-open #listSection{display:none}
 .layout.song-open #detail{display:flex;position:fixed;inset:0;z-index:1000;width:100%;height:100vh;height:100dvh;max-width:none;margin:0;border:0;border-radius:0;padding: max(12px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom));box-shadow:none;flex-direction:column;overflow:hidden;background:var(--card)}
@@ -3552,10 +3554,13 @@ function isChordLineForTranspose(line){
 function transposeText(txt,n){
  return String(txt||'').replace(/\r\n?/g,'\n').split('\n').map(line=>{
   if(isChordLineForTranspose(line))return line.replace(/\S+/g,token=>transposeChordToken(token,n));
-  return line.replace(/\[([^\]]+)\]/g,(all,inside)=>{
+  let result=line.replace(/\[([^\]]+)\]/g,(all,inside)=>{
    const tokens=inside.split(/(\s+)/);
    return '['+tokens.map(token=>/\s+/.test(token)?token:transposeChordToken(token,n)).join('')+']';
   });
+  // Também transpõe acordes entre aspas usados em indicações como [Intro] "C#".
+  result=result.replace(/"([^"]+)"/g,(all,inside)=>chordTokenPattern.test(inside)?'"'+transposeChordToken(inside,n)+'"':all);
+  return result;
  }).join('\n');
 }
 let scrollLastFrameTime=null;
