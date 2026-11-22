@@ -426,7 +426,7 @@ body.app-entered #appWelcomeScreen{display:none}
       <div class="panel" id="addPanel" style="display:none">
         <h2 id="formTitle">Adicionar louvor à sua biblioteca</h2>
         <label>Nome do louvor</label><input id="newTitle" placeholder="Nome da música">
-        <div class="formgrid"><div><label>Artista / Ministério</label><input id="newArtist" placeholder="Opcional"></div><div><label>Categoria</label><select id="newCat"><option>Congregacionais</option><option>Adoração</option><option>Tradicionais</option><option>Harpa Cristã</option></select></div></div>
+        <div class="formgrid"><div><label>Artista / Ministério</label><input id="newArtist" placeholder="Opcional"></div><div><label>Categoria</label><select id="newCat"><option value="Harpa Cristã">Domingo</option><option value="Tradicionais">Quinta</option><option value="Congregacionais">Outros</option><option value="Adoração">Adoração</option><option value="Favoritos">♥ Favoritos</option></select></div></div>
         <div class="formgrid"><div><label>Tom original</label><select id="newKey"><option>C</option><option>Cm</option><option>C#</option><option>C#m</option><option>D</option><option>Dm</option><option>D#</option><option>D#m</option><option>E</option><option>Em</option><option>F</option><option>Fm</option><option>F#</option><option>F#m</option><option>G</option><option>Gm</option><option>G#</option><option>G#m</option><option>A</option><option>Am</option><option>A#</option><option>A#m</option><option>B</option><option>Bm</option></select></div><div><label>Capotraste (opcional)</label><input id="newCapo" placeholder="Ex.: casa 2"></div></div>
         <label>Cifra / letra (opcional)</label><textarea id="newChords" rows="7" placeholder="Cole aqui sua cifra. Ex.:
 G                 D
@@ -3878,7 +3878,7 @@ async function saveSong(){
  savingSong=true;if(button)button.disabled=true;
  const previousSongs=songs.map(song=>({...song})),previousFavorites=favorites.slice();
  try{
-  const data={title,artist:$('newArtist').value.trim(),category:$('newCat').value,key:$('newKey').value,chords:$('newChords').value.trim()||'Cifra ainda não cadastrada.',capo:$('newCapo').value.trim(),chordColor:safeColor($('chordColor').value,'#1d4f91'),lyricColor:safeColor($('lyricColor').value,'#172235'),fontFamily:$('songFont').value,bold:$('songBold').checked};
+  const selectedCategory=$('newCat').value;const markAsFavorite=selectedCategory==='Favoritos';const oldSongForCategory=editingId!==null?songs.find(x=>x.id===editingId):null;const data={title,artist:$('newArtist').value.trim(),category:markAsFavorite?(oldSongForCategory&&oldSongForCategory.category?oldSongForCategory.category:'Congregacionais'):selectedCategory,key:$('newKey').value,chords:$('newChords').value.trim()||'Cifra ainda não cadastrada.',capo:$('newCapo').value.trim(),chordColor:safeColor($('chordColor').value,'#1d4f91'),lyricColor:safeColor($('lyricColor').value,'#172235'),fontFamily:$('songFont').value,bold:$('songBold').checked};
   const oldSong=editingId!==null?songs.find(x=>x.id===editingId):null;
   if(editingId!==null&&!oldSong)throw new Error('Não encontrei esta música para editar.');
   const id=editingId!==null?editingId:songs.reduce((m,s)=>Math.max(m,Number(s.id)||0),0)+1;
@@ -3891,6 +3891,7 @@ async function saveSong(){
    const songIndex=songs.findIndex(x=>x.id===editingId);
    songs[songIndex]=nextSong;
   }else songs.push(nextSong);
+  if(markAsFavorite&&!favorites.includes(id))favorites.push(id);
   if(!await persist()){
    songs=previousSongs;favorites=previousFavorites;render();
    throw new Error('A música foi enviada à nuvem, mas não foi possível gravar a cópia local. Sincronize este aparelho.');
