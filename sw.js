@@ -1,4 +1,4 @@
-const CACHE_NAME = 'louvores-adoracao-v25';
+const CACHE_NAME = 'louvores-adoracao-v26';
 
 const APP_FILES = [
   './',
