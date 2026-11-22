@@ -3896,6 +3896,7 @@ async function saveSong(){
    songs=previousSongs;favorites=previousFavorites;render();
    throw new Error('A música foi enviada à nuvem, mas não foi possível gravar a cópia local. Sincronize este aparelho.');
   }
+  if(markAsFavorite&&window.LouvoresCloud&&window.LouvoresCloud.isApproved())window.LouvoresCloud.saveSettings().catch(e=>console.warn('Favorito não sincronizado:',e));
   clearSongForm();$('addPanel').style.display='none';filter='Todos';render();
   if(!songs.some(x=>x.id===current))current=null;
   openSong(id);
